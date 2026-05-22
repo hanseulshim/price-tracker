@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Store {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  location     String?
+  createdAt    DateTime      @default(now())
+  prices       Price[]
+  receipts     Receipt[]
+}
+
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  items Item[]
+}
+
+model Item {
+  id           Int           @id @default(autoincrement())
+  name         String
+  brand        String?
+  unit         String?
+  categoryId   Int
+  category     Category      @relation(fields: [categoryId], references: [id])
+  prices       Price[]
+  receiptItems ReceiptItem[]
+}
+
+model Price {
+  id        Int      @id @default(autoincrement())
+  itemId    Int
+  storeId   Int
+  price     Float
+  quantity  Float?
+  date      DateTime @default(now())
+  notes     String?
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model Receipt {
+  id        Int           @id @default(autoincrement())
+  storeId   Int
+  date      DateTime
+  rawText   String
+  createdAt DateTime      @default(now())
+  store     Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items     ReceiptItem[]
+}
+
+model ReceiptItem {
+  id         Int      @id @default(autoincrement())
+  receiptId  Int
+  itemId     Int?
+  rawName    String
+  price      Float
+  quantity   Float?
+  receipt    Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  item       Item?    @relation(fields: [itemId], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,15 @@
+services:
+  price-tracker:
+    image: ghcr.io/GITHUB_USERNAME/price-tracker:latest
+    container_name: price-tracker
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/app/data/price-tracker.db
+      - NODE_ENV=production
+    volumes:
+      - price-tracker-data:/app/data
+
+volumes:
+  price-tracker-data:
