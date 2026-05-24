@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
-    "@prisma/adapter-better-sqlite3": "^7.8.0",
-    "better-sqlite3": "^12.10.0",
+    "@libsql/client": "^0.17.3",
+    "@prisma/adapter-libsql": "^7.8.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -32,7 +32,6 @@
   "devDependencies": {
     "@prisma/client": "^7.8.0",
     "@tailwindcss/postcss": "^4",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

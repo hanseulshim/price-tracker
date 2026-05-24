@@ -2,9 +2,6 @@
 FROM node:22-slim AS builder
 WORKDIR /app
 
-# Install build dependencies for native modules (better-sqlite3)
-RUN apt-get update && apt-get install -y python3 make g++ --no-install-recommends && rm -rf /var/lib/apt/lists/*
-
 COPY package*.json ./
 RUN npm install --no-audit --no-fund
 
