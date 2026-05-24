@@ -3,6 +3,10 @@ FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY package*.json ./
+# Copy prisma files before npm install so postinstall (prisma generate) can find the schema
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+
 RUN npm install --no-audit --no-fund
 
 COPY . .
