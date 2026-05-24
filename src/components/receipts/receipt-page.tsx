@@ -259,8 +259,7 @@ export function ReceiptPage({
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
                     placeholder={"WHOLE MILK          3.49\nCHICKEN BREAST      8.99\nEGGS DOZEN          2.99\n..."}
-                    rows={12}
-                    className="font-mono text-xs"
+                    className="font-mono text-xs h-64 resize-none overflow-y-auto field-sizing-fixed"
                   />
                 </div>
               </div>
