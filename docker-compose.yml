@@ -1,6 +1,6 @@
 services:
   price-tracker:
-    image: ghcr.io/GITHUB_USERNAME/price-tracker:latest
+    image: ghcr.io/hanseulshim/price-tracker:latest
     container_name: price-tracker
     restart: unless-stopped
     ports:
