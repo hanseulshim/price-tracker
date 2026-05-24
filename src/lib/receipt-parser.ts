@@ -40,7 +40,175 @@ const PRICE_PATTERNS = [
   /^(.+?)\s+\$(\d+\.\d{2})\s*$/,
 ];
 
+// ─── Walmart Web Page Format Parser ───────────────────────────────────────────
+// Handles copy-paste from walmart.com/orders — structured blocks with
+// section headers (Weight-adjusted / Shopped / Unavailable), per-item
+// Qty lines, savings lines, and "Was $X.XX" original-price markers.
+
+const WALMART_SECTION_HEADERS = new Set([
+  "Weight-adjusted",
+  "Shopped",
+  "Unavailable",
+]);
+
+const WALMART_DETAIL_PATTERNS = [
+  /^\d+\s+items\s+received$/i,
+  /^Qty\s+\d+$/,
+  /^Final weight/i,
+  /^Requested weight/i,
+  /^Multipack Quantity/i,
+  /^Was \$/,
+  /from savings$/i,
+  / ea$/i,
+  /^Ordered price/i,
+  /^Discount price/i,
+  /[¢$]\/(?:oz|lb|ea|fl\s*oz)/i, // unit rates: "24.8¢/oz", "$3.22/lb"
+  /^\$[\d.]+\//, // "$X.XX/unit"
+  /^\$[\d.]+$/, // standalone price like "$4.24"
+  /^\d+\.?\d*\s*lbs?$/, // weight: "1.7 lbs"
+];
+
+function isWalmartDetailLine(line: string): boolean {
+  return (
+    WALMART_SECTION_HEADERS.has(line) ||
+    WALMART_DETAIL_PATTERNS.some((p) => p.test(line))
+  );
+}
+
+function isWalmartItemName(line: string): boolean {
+  if (!line || isWalmartDetailLine(line)) return false;
+  // Must start with a letter (product names) — handles "fairlife" (lowercase)
+  return /^[A-Za-z]/.test(line);
+}
+
+function extractWalmartItemPrice(block: string[]): {
+  price: number | null;
+  qty: number;
+} {
+  let qty = 1;
+  const prices: { index: number; value: number }[] = [];
+  let wasIndex = -1;
+
+  for (let i = 0; i < block.length; i++) {
+    const line = block[i];
+
+    const qtyMatch = line.match(/^Qty\s+(\d+)$/);
+    if (qtyMatch) {
+      qty = parseInt(qtyMatch[1]);
+      continue;
+    }
+
+    if (/^Was \$/.test(line)) {
+      wasIndex = i;
+      continue;
+    }
+
+    // Skip all non-plain-price detail lines
+    if (
+      /from savings$/i.test(line) ||
+      / ea$/i.test(line) ||
+      /^Ordered price/i.test(line) ||
+      /^Discount price/i.test(line) ||
+      /[¢$]\//.test(line) ||
+      /^\$[\d.]+\//.test(line) ||
+      /^Final weight/i.test(line) ||
+      /^Requested weight/i.test(line) ||
+      /^Multipack Quantity/i.test(line) ||
+      /^\d+\.?\d*\s*lbs?$/.test(line)
+    ) {
+      continue;
+    }
+
+    const priceMatch = line.match(/^\$(\d+\.\d{2})$/);
+    if (priceMatch) {
+      prices.push({ index: i, value: parseFloat(priceMatch[1]) });
+    }
+  }
+
+  let finalPrice: number | null = null;
+  if (wasIndex >= 0) {
+    // Item had a discount — use the last plain price BEFORE "Was $X"
+    const beforeWas = prices.filter((p) => p.index < wasIndex);
+    if (beforeWas.length > 0) {
+      finalPrice = beforeWas[beforeWas.length - 1].value;
+    }
+  } else {
+    // No discount — use last plain price
+    if (prices.length > 0) {
+      finalPrice = prices[prices.length - 1].value;
+    }
+  }
+
+  return { price: finalPrice, qty };
+}
+
+function parseWalmartWeb(text: string): ParsedItem[] {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  const items: ParsedItem[] = [];
+  let currentSection = "";
+  let currentItemName = "";
+  let currentBlock: string[] = [];
+
+  function flushItem() {
+    if (!currentItemName || currentSection === "Unavailable") return;
+    const { price, qty } = extractWalmartItemPrice(currentBlock);
+    if (price === null || price <= 0) return;
+    const unitPrice = Math.round((price / qty) * 100) / 100;
+    items.push({
+      rawName: cleanItemName(currentItemName),
+      price: unitPrice,
+      quantity: qty > 1 ? qty : undefined,
+    });
+  }
+
+  for (const line of lines) {
+    if (WALMART_SECTION_HEADERS.has(line)) {
+      flushItem();
+      currentSection = line;
+      currentItemName = "";
+      currentBlock = [];
+      continue;
+    }
+
+    if (!currentSection) continue; // skip header lines before first section
+
+    if (isWalmartItemName(line)) {
+      flushItem();
+      currentItemName = line;
+      currentBlock = [];
+    } else {
+      currentBlock.push(line);
+    }
+  }
+
+  flushItem(); // process last item
+  return items;
+}
+
+function isWalmartWebFormat(text: string): boolean {
+  return (
+    /\d+\s+items\s+received/i.test(text) &&
+    (WALMART_SECTION_HEADERS.has("Shopped") ||
+      WALMART_SECTION_HEADERS.has("Weight-adjusted")) &&
+    /Weight-adjusted|Shopped/m.test(text) &&
+    /[¢$]\/(?:oz|lb|ea|fl\s*oz)/i.test(text)
+  );
+}
+
+// ─── Main Entry Point ─────────────────────────────────────────────────────────
+
 export function parseReceiptText(text: string): ParsedItem[] {
+  if (isWalmartWebFormat(text)) {
+    return parseWalmartWeb(text);
+  }
+  return parseGenericReceipt(text);
+}
+
+function parseGenericReceipt(text: string): ParsedItem[] {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
