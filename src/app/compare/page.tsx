@@ -3,6 +3,8 @@ import { getStores } from "@/actions/stores";
 import { getCategories } from "@/actions/categories";
 import { CompareTable } from "@/components/compare/compare-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function ComparePage() {
   const [data, stores, categories] = await Promise.all([
     getComparisonData(),

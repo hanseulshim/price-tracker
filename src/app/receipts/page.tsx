@@ -4,6 +4,8 @@ import { getCategories } from "@/actions/categories";
 import { getItems } from "@/actions/items";
 import { ReceiptPage } from "@/components/receipts/receipt-page";
 
+export const dynamic = "force-dynamic";
+
 export default async function ReceiptsPageWrapper() {
   const [receipts, stores, categories, items] = await Promise.all([
     getReceipts(),

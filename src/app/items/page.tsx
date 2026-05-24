@@ -2,6 +2,8 @@ import { getItems } from "@/actions/items";
 import { getCategories } from "@/actions/categories";
 import { ItemList } from "@/components/items/item-list";
 
+export const dynamic = "force-dynamic";
+
 export default async function ItemsPage() {
   const [items, categories] = await Promise.all([getItems(), getCategories()]);
   return (

@@ -1,6 +1,8 @@
 import { getStores } from "@/actions/stores";
 import { StoreList } from "@/components/stores/store-list";
 
+export const dynamic = "force-dynamic";
+
 export default async function StoresPage() {
   const stores = await getStores();
   return (
