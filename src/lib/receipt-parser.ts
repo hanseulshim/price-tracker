@@ -4,6 +4,11 @@ export interface ParsedItem {
   quantity?: number;
 }
 
+export interface ParsedReceipt {
+  items: ParsedItem[];
+  date?: string; // ISO date string YYYY-MM-DD if detected
+}
+
 // Lines to skip that match common receipt noise
 const SKIP_PATTERNS = [
   /^(sub)?total/i,
@@ -199,13 +204,78 @@ function isWalmartWebFormat(text: string): boolean {
   );
 }
 
+// ─── Date Extraction ──────────────────────────────────────────────────────────
+
+const MONTHS: Record<string, number> = {
+  january: 1, jan: 1,
+  february: 2, feb: 2,
+  march: 3, mar: 3,
+  april: 4, apr: 4,
+  may: 5,
+  june: 6, jun: 6,
+  july: 7, jul: 7,
+  august: 8, aug: 8,
+  september: 9, sep: 9, sept: 9,
+  october: 10, oct: 10,
+  november: 11, nov: 11,
+  december: 12, dec: 12,
+};
+
+function toISO(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Attempts to extract a date from receipt text.
+ * Handles formats like:
+ *   "May 20, 2026 order"
+ *   "Delivered on May 20"  (current year assumed)
+ *   "05/20/2026", "5/20/26"
+ *   "2026-05-20"
+ */
+export function extractDate(text: string): string | undefined {
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
+
+  for (const line of lines) {
+    // "Month DD, YYYY" or "Month DD YYYY" — e.g. "May 20, 2026 order"
+    const longDate = line.match(
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{1,2}),?\s+(\d{4})\b/i
+    );
+    if (longDate) {
+      const month = MONTHS[longDate[1].toLowerCase()];
+      const day = parseInt(longDate[2]);
+      const year = parseInt(longDate[3]);
+      if (month && day >= 1 && day <= 31) return toISO(year, month, day);
+    }
+
+    // ISO date "YYYY-MM-DD"
+    const iso = line.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+    if (iso) {
+      const year = parseInt(iso[1]);
+      if (year >= 2000 && year <= 2100) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    }
+
+    // MM/DD/YYYY or M/D/YY
+    const slashDate = line.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/);
+    if (slashDate) {
+      const month = parseInt(slashDate[1]);
+      const day = parseInt(slashDate[2]);
+      let year = parseInt(slashDate[3]);
+      if (year < 100) year += 2000;
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 2000)
+        return toISO(year, month, day);
+    }
+  }
+
+  return undefined;
+}
+
 // ─── Main Entry Point ─────────────────────────────────────────────────────────
 
-export function parseReceiptText(text: string): ParsedItem[] {
-  if (isWalmartWebFormat(text)) {
-    return parseWalmartWeb(text);
-  }
-  return parseGenericReceipt(text);
+export function parseReceiptText(text: string): ParsedReceipt {
+  const date = extractDate(text);
+  const items = isWalmartWebFormat(text) ? parseWalmartWeb(text) : parseGenericReceipt(text);
+  return { items, date };
 }
 
 function parseGenericReceipt(text: string): ParsedItem[] {

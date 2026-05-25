@@ -92,8 +92,11 @@ export function ReceiptPage({
     if (!rawText.trim()) return;
     setParsing(true);
     try {
-      const parsed = await parseReceipt(rawText);
+      const result = await parseReceipt(rawText);
+      const parsed = result.items;
       setParsedItems(parsed);
+      // Auto-fill date if detected from the receipt text
+      if (result.date) setDate(result.date);
       // Auto-match by fuzzy name, stripping store brand prefixes before comparison
       const matched = parsed.map((p) => {
         const q = stripBrandPrefix(p.rawName).toLowerCase();
