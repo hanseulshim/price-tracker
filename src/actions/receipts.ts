@@ -7,8 +7,12 @@ import { extractBrand } from "@/lib/brand-utils";
 
 export async function getReceipts() {
   return db.receipt.findMany({
-    include: {
-      store: true,
+    select: {
+      id: true,
+      date: true,
+      orderNumber: true,
+      notes: true,
+      store: { select: { name: true } },
       _count: { select: { items: true } },
     },
     orderBy: { date: "desc" },
@@ -33,6 +37,8 @@ export async function importReceipt(data: {
   storeId: number;
   date: Date;
   rawText: string;
+  orderNumber?: string;
+  notes?: string;
   items: Array<{
     rawName: string;
     price: number;
@@ -45,6 +51,8 @@ export async function importReceipt(data: {
       storeId: data.storeId,
       date: data.date,
       rawText: data.rawText,
+      orderNumber: data.orderNumber,
+      notes: data.notes,
       items: {
         create: data.items.map((item) => ({
           rawName: item.rawName,

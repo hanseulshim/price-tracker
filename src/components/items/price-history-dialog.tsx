@@ -87,6 +87,7 @@ export function PriceHistoryDialog({
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )) {
     const dateKey = new Date(p.date).toLocaleDateString("en-US", {
+      timeZone: "UTC",
       month: "short",
       day: "numeric",
       year: "2-digit",
@@ -198,6 +199,7 @@ export function PriceHistoryDialog({
                     <tr key={p.id} className="border-t last:border-0">
                       <td className="py-2 px-3 text-muted-foreground">
                         {new Date(p.date).toLocaleDateString("en-US", {
+                          timeZone: "UTC",
                           month: "short",
                           day: "numeric",
                           year: "numeric",

@@ -45,6 +45,8 @@ type Receipt = {
   id: number;
   date: Date;
   store: { name: string };
+  orderNumber: string | null;
+  notes: string | null;
   _count: { items: number };
 };
 
@@ -74,6 +76,8 @@ export function ReceiptPage({
   const [newItemCategories, setNewItemCategories] = useState<number[]>([]);
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [orderNumber, setOrderNumber] = useState("");
+  const [notes, setNotes] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   type ReceiptDetail = Awaited<ReturnType<typeof getReceipt>>;
   const [expandedDetails, setExpandedDetails] = useState<Record<number, ReceiptDetail>>({});
@@ -102,6 +106,8 @@ export function ReceiptPage({
     setMatchedItems([]);
     setNewItemNames([]);
     setNewItemCategories([]);
+    setOrderNumber("");
+    setNotes("");
     setImportOpen(true);
   }
 
@@ -112,8 +118,9 @@ export function ReceiptPage({
       const result = await parseReceipt(rawText);
       const parsed = result.items;
       setParsedItems(parsed);
-      // Auto-fill date if detected from the receipt text
       if (result.date) setDate(result.date);
+      if (result.orderNumber) setOrderNumber(result.orderNumber);
+      if (result.storeAddress) setNotes(result.storeAddress);
       // Auto-match by fuzzy name, stripping store brand prefixes before comparison
       const matched = parsed.map((p) => {
         const q = stripBrandPrefix(p.rawName).toLowerCase();
@@ -124,9 +131,7 @@ export function ReceiptPage({
         return found ? found.id : ("new" as const);
       });
       setMatchedItems(matched);
-      // Normalized names for new items (editable)
       setNewItemNames(parsed.map((p) => normalizeName(p.rawName)));
-      // Smart category guess per item
       setNewItemCategories(parsed.map((p) => {
         const normalized = normalizeName(p.rawName);
         const guessed = guessCategory(normalized);
@@ -165,10 +170,16 @@ export function ReceiptPage({
         }
       }
 
+      // Fix: parse date as local noon to avoid UTC midnight timezone shift
+      const [y, m, d] = date.split("-").map(Number);
+      const localDate = new Date(y, m - 1, d, 12, 0, 0);
+
       await importReceipt({
         storeId,
-        date: new Date(date),
+        date: localDate,
         rawText,
+        orderNumber: orderNumber.trim() || undefined,
+        notes: notes.trim() || undefined,
         items: finalItems,
       });
 
@@ -231,8 +242,11 @@ export function ReceiptPage({
                       <div>
                         <span className="font-medium">{r.store.name}</span>
                         <span className="text-xs text-muted-foreground ml-2">
-                          {new Date(r.date).toLocaleDateString()}
+                          {new Date(r.date).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
                         </span>
+                        {r.orderNumber && (
+                          <span className="text-xs text-muted-foreground ml-2">#{r.orderNumber}</span>
+                        )}
                       </div>
                     </button>
                     <Badge variant="secondary" className="text-xs">{r._count.items} items</Badge>
@@ -314,6 +328,24 @@ export function ReceiptPage({
                   <div className="space-y-1.5">
                     <Label>Date</Label>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Order # <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <Input
+                      placeholder="e.g. 2000147-33985221"
+                      value={orderNumber}
+                      onChange={(e) => setOrderNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Store Address / Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <Input
+                      placeholder="e.g. 4725 W Ox Rd, Fairfax, VA"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">

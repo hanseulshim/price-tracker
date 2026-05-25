@@ -46,13 +46,15 @@ model Price {
 }
 
 model Receipt {
-  id        Int           @id @default(autoincrement())
-  storeId   Int
-  date      DateTime
-  rawText   String
-  createdAt DateTime      @default(now())
-  store     Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  items     ReceiptItem[]
+  id          Int           @id @default(autoincrement())
+  storeId     Int
+  date        DateTime
+  rawText     String
+  orderNumber String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  store       Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items       ReceiptItem[]
 }
 
 model ReceiptItem {

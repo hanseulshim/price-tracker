@@ -159,7 +159,7 @@ export function CompareTable({
                               <div className="text-xs text-muted-foreground mt-0.5 italic">{p.brand}</div>
                             )}
                             <div className="text-xs text-muted-foreground mt-0.5">
-                              {new Date(p.date).toLocaleDateString()}
+                              {new Date(p.date).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
                             </div>
                             {isCheapest && prices.length > 1 && (
                               <div className="text-xs text-green-600 font-medium">Best price</div>
