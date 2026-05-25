@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
 import { getComparisonData } from "@/actions/prices";
-import { ShoppingCart, Store, Tag, Receipt, TrendingDown } from "lucide-react";
+import { ShoppingCart, Store, Tag, Receipt, TrendingDown, BarChart2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -26,26 +27,41 @@ export default async function DashboardPage() {
     include: { store: true, _count: { select: { items: true } } },
   });
 
+  const priceEntryCount = comparisonData.reduce((sum, i) => sum + i.storePrices.length, 0);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Track prices across your favorite stores</p>
+      {/* Hero header */}
+      <div className="rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-6 shadow-md">
+        <div className="flex items-center gap-3 mb-1">
+          <ShoppingCart className="h-6 w-6 text-emerald-200" />
+          <h1 className="text-2xl font-bold tracking-tight">Price Tracker</h1>
+        </div>
+        <p className="text-emerald-100 text-sm">
+          Track and compare grocery prices across your favorite stores
+        </p>
       </div>
 
+      {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard icon={Store} label="Stores" value={storeCount} href="/stores" />
-        <StatCard icon={Tag} label="Items" value={itemCount} href="/items" />
-        <StatCard icon={Receipt} label="Receipts" value={receiptCount} href="/receipts" />
-        <StatCard icon={ShoppingCart} label="Price Entries" value={comparisonData.reduce((sum, i) => sum + i.storePrices.length, 0)} href="/compare" />
+        <StatCard icon={Store} label="Stores" value={storeCount} href="/stores"
+          color="bg-blue-500" colorLight="bg-blue-50 dark:bg-blue-950/40" textColor="text-blue-600 dark:text-blue-400" />
+        <StatCard icon={Tag} label="Items" value={itemCount} href="/items"
+          color="bg-emerald-500" colorLight="bg-emerald-50 dark:bg-emerald-950/40" textColor="text-emerald-600 dark:text-emerald-400" />
+        <StatCard icon={Receipt} label="Receipts" value={receiptCount} href="/receipts"
+          color="bg-amber-500" colorLight="bg-amber-50 dark:bg-amber-950/40" textColor="text-amber-600 dark:text-amber-400" />
+        <StatCard icon={BarChart2} label="Price Entries" value={priceEntryCount} href="/compare"
+          color="bg-violet-500" colorLight="bg-violet-50 dark:bg-violet-950/40" textColor="text-violet-600 dark:text-violet-400" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingDown className="h-4 w-4 text-green-600" />
-              Price Comparisons
+              <div className="p-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/50">
+                <TrendingDown className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              Best Price Deals
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -55,24 +71,24 @@ export default async function DashboardPage() {
                 <Link href="/receipts" className="text-primary underline">Import receipt</Link>
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {bestDeals.map((item) => {
                   const sorted = [...item.storePrices].sort((a, b) => a.price - b.price);
                   const cheapest = sorted[0];
                   const priceDiff = sorted.length > 1 ? sorted[sorted.length - 1].price - sorted[0].price : 0;
                   return (
-                    <div key={item.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
+                    <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div>
                         <span className="text-sm font-medium">{item.name}</span>
-                        {cheapest.brand && <span className="text-xs text-muted-foreground ml-1 italic">{cheapest.brand}</span>}
+                        {cheapest.brand && <span className="text-xs text-muted-foreground ml-1.5 italic">{cheapest.brand}</span>}
                       </div>
                       <div className="text-right shrink-0 ml-2">
-                        <div className="text-sm font-semibold text-green-600">
+                        <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                           ${cheapest.price.toFixed(2)}{" "}
                           <span className="text-xs font-normal text-muted-foreground">@ {cheapest.store.name}</span>
                         </div>
                         {priceDiff > 0.01 && (
-                          <div className="text-xs text-muted-foreground">save ${priceDiff.toFixed(2)} vs highest</div>
+                          <div className="text-xs text-muted-foreground">save ${priceDiff.toFixed(2)}</div>
                         )}
                       </div>
                     </div>
@@ -81,15 +97,17 @@ export default async function DashboardPage() {
               </div>
             )}
             {bestDeals.length > 0 && (
-              <Link href="/compare" className="text-sm text-primary hover:underline mt-3 block">View full comparison →</Link>
+              <Link href="/compare" className="text-sm text-primary hover:underline mt-3 block font-medium">View full comparison →</Link>
             )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Receipt className="h-4 w-4" />
+              <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/50">
+                <Receipt className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
               Recent Receipts
             </CardTitle>
           </CardHeader>
@@ -100,9 +118,9 @@ export default async function DashboardPage() {
                 <Link href="/receipts" className="text-primary underline">Import your first receipt</Link>
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {recentReceipts.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
+                  <div key={r.id} className="flex items-center justify-between py-2 border-b last:border-0">
                     <div>
                       <span className="text-sm font-medium">{r.store.name}</span>
                       <div className="text-xs text-muted-foreground">{new Date(r.date).toLocaleDateString()}</div>
@@ -113,19 +131,21 @@ export default async function DashboardPage() {
               </div>
             )}
             {recentReceipts.length > 0 && (
-              <Link href="/receipts" className="text-sm text-primary hover:underline mt-3 block">View all receipts →</Link>
+              <Link href="/receipts" className="text-sm text-primary hover:underline mt-3 block font-medium">View all receipts →</Link>
             )}
           </CardContent>
         </Card>
       </div>
 
       {storeCount === 0 && (
-        <Card className="border-dashed">
+        <Card className="border-dashed border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
           <CardContent className="py-8 text-center">
-            <ShoppingCart className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+            <div className="h-14 w-14 mx-auto mb-3 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+              <ShoppingCart className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+            </div>
             <h3 className="font-semibold mb-1">Get started</h3>
             <p className="text-sm text-muted-foreground mb-4">Add your first store to start tracking prices.</p>
-            <Link href="/stores" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90">
+            <Link href="/stores" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors">
               Add a store
             </Link>
           </CardContent>
@@ -135,18 +155,23 @@ export default async function DashboardPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, href }: { icon: React.ElementType; label: string; value: number; href: string }) {
+function StatCard({
+  icon: Icon, label, value, href, color, colorLight, textColor,
+}: {
+  icon: React.ElementType; label: string; value: number; href: string;
+  color: string; colorLight: string; textColor: string;
+}) {
   return (
     <Link href={href}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer">
-        <CardContent className="pt-5 pb-4">
+      <Card className={cn("hover:shadow-md transition-all cursor-pointer border-0 shadow-sm", colorLight)}>
+        <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-md">
-              <Icon className="h-4 w-4 text-primary" />
+            <div className={cn("p-2.5 rounded-lg text-white shadow-sm", color)}>
+              <Icon className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-2xl font-bold">{value}</div>
-              <div className="text-xs text-muted-foreground">{label}</div>
+              <div className={cn("text-2xl font-bold", textColor)}>{value}</div>
+              <div className="text-xs text-muted-foreground font-medium">{label}</div>
             </div>
           </div>
         </CardContent>
