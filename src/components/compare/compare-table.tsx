@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +27,31 @@ type ItemData = {
   cheapestStoreId: number | null;
 };
 
+type SortKey = "name" | "category" | "savings" | `store-${number}`;
+type SortDir = "asc" | "desc";
+
+function SortButton({
+  label, sortKey, current, dir, onSort,
+}: {
+  label: string; sortKey: SortKey; current: SortKey; dir: SortDir;
+  onSort: (k: SortKey) => void;
+}) {
+  const active = current === sortKey;
+  return (
+    <button
+      className="flex items-center gap-1 hover:text-foreground transition-colors w-full justify-center"
+      onClick={() => onSort(sortKey)}
+    >
+      {label}
+      {active ? (
+        dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-40" />
+      )}
+    </button>
+  );
+}
+
 export function CompareTable({
   data,
   stores,
@@ -39,22 +64,62 @@ export function CompareTable({
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<number | null>(null);
   const [historyItem, setHistoryItem] = useState<{ id: number; name: string } | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const filtered = data.filter((item) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      !q ||
-      item.name.toLowerCase().includes(q) ||
-      item.storePrices.some((p) => p.brand?.toLowerCase().includes(q));
-    const matchesCat = !filterCat || item.category.id === filterCat;
-    return matchesSearch && matchesCat;
-  });
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
 
   // Stores that appear in at least one price entry
   const activeStoreIds = new Set(
     data.flatMap((item) => item.storePrices.map((p) => p.storeId))
   );
   const activeStores = stores.filter((s) => activeStoreIds.has(s.id));
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    let result = data.filter((item) => {
+      const matchesSearch =
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.storePrices.some((p) => p.brand?.toLowerCase().includes(q));
+      const matchesCat = !filterCat || item.category.id === filterCat;
+      return matchesSearch && matchesCat;
+    });
+
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") {
+        cmp = a.name.localeCompare(b.name);
+      } else if (sortKey === "category") {
+        cmp = a.category.name.localeCompare(b.category.name) || a.name.localeCompare(b.name);
+      } else if (sortKey === "savings") {
+        const savingsA = (() => {
+          const prices = a.storePrices.map((p) => p.price);
+          return prices.length >= 2 ? Math.max(...prices) - Math.min(...prices) : 0;
+        })();
+        const savingsB = (() => {
+          const prices = b.storePrices.map((p) => p.price);
+          return prices.length >= 2 ? Math.max(...prices) - Math.min(...prices) : 0;
+        })();
+        cmp = savingsB - savingsA; // bigger savings first by default
+      } else if (sortKey.startsWith("store-")) {
+        const storeId = Number(sortKey.split("-")[1]);
+        const priceA = a.storePrices.find((p) => p.storeId === storeId)?.price ?? Infinity;
+        const priceB = b.storePrices.find((p) => p.storeId === storeId)?.price ?? Infinity;
+        cmp = priceA - priceB;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [data, search, filterCat, sortKey, sortDir]);
 
   if (data.length === 0) {
     return (
@@ -97,13 +162,41 @@ export function CompareTable({
           <thead className="bg-muted/50">
             <tr>
               <th className="text-left py-3 px-4 font-medium sticky left-0 bg-muted/50 min-w-[180px]">
-                Item
+                <div className="flex items-center gap-3">
+                  <button
+                    className={cn("hover:text-foreground transition-colors flex items-center gap-1", sortKey === "name" ? "text-foreground" : "text-muted-foreground")}
+                    onClick={() => handleSort("name")}
+                  >
+                    Item {sortKey === "name" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />) : <ArrowUpDown className="h-3 w-3 inline opacity-40" />}
+                  </button>
+                  <button
+                    className={cn("hover:text-foreground transition-colors flex items-center gap-1 text-xs", sortKey === "category" ? "text-foreground" : "text-muted-foreground")}
+                    onClick={() => handleSort("category")}
+                  >
+                    Cat {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />) : <ArrowUpDown className="h-3 w-3 inline opacity-40" />}
+                  </button>
+                </div>
               </th>
               {activeStores.map((store) => (
                 <th key={store.id} className="text-center py-3 px-4 font-medium whitespace-nowrap min-w-[110px]">
-                  {store.name}
+                  <SortButton
+                    label={store.name}
+                    sortKey={`store-${store.id}`}
+                    current={sortKey}
+                    dir={sortDir}
+                    onSort={handleSort}
+                  />
                 </th>
               ))}
+              <th className="text-center py-3 px-4 font-medium whitespace-nowrap min-w-[90px]">
+                <SortButton
+                  label="Savings"
+                  sortKey="savings"
+                  current={sortKey}
+                  dir={sortDir}
+                  onSort={handleSort}
+                />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -171,6 +264,16 @@ export function CompareTable({
                       </td>
                     );
                   })}
+                  {/* Savings column */}
+                  <td className="py-2.5 px-4 text-center">
+                    {prices.length >= 2 ? (
+                      <span className="text-emerald-600 font-medium text-sm">
+                        ${(Math.max(...prices) - Math.min(...prices)).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
