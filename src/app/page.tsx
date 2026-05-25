@@ -163,7 +163,7 @@ function StatCard({
 }) {
   return (
     <Link href={href}>
-      <Card className={cn("hover:shadow-md transition-all cursor-pointer border-0 shadow-sm", colorLight)}>
+      <Card className={cn("hover:shadow-md transition-shadow cursor-pointer border-0 shadow-sm", colorLight)}>
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-3">
             <div className={cn("p-2.5 rounded-lg text-white shadow-sm", color)}>
