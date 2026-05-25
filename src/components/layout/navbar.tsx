@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, LayoutDashboard, Store, Tag, Folder, Receipt, BarChart2 } from "lucide-react";
+import { ShoppingCart, Store, Tag, Folder, Receipt, BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Compare", icon: BarChart2 },
   { href: "/stores", label: "Stores", icon: Store },
   { href: "/items", label: "Items", icon: Tag },
   { href: "/categories", label: "Categories", icon: Folder },
   { href: "/receipts", label: "Receipts", icon: Receipt },
-  { href: "/compare", label: "Compare", icon: BarChart2 },
 ];
 
 export function NavBar() {
