@@ -36,7 +36,6 @@ type Category = { id: number; name: string; _count: { items: number } };
 type Item = {
   id: number;
   name: string;
-  brand: string | null;
   category: { id: number; name: string };
 };
 
@@ -301,7 +300,7 @@ export function ReceiptPage({
                           <optgroup label="Existing items">
                             {items.map((item) => (
                               <option key={item.id} value={item.id}>
-                                {item.name}{item.brand ? ` (${item.brand})` : ""}
+                                {item.name}
                               </option>
                             ))}
                           </optgroup>

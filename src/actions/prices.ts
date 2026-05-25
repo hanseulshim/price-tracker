@@ -8,6 +8,7 @@ export async function addPrice(data: {
   storeId: number;
   price: number;
   quantity?: number;
+  brand?: string;
   date?: Date;
   notes?: string;
 }) {

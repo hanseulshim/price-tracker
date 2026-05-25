@@ -13,13 +13,13 @@ type Category = { id: number; name: string; _count: { items: number } };
 type ItemData = {
   id: number;
   name: string;
-  brand: string | null;
   unit: string | null;
   category: { id: number; name: string };
   storePrices: Array<{
     id: number;
     price: number;
     storeId: number;
+    brand: string | null;
     date: Date;
     store: Store;
   }>;
@@ -43,7 +43,7 @@ export function CompareTable({
     const matchesSearch =
       !q ||
       item.name.toLowerCase().includes(q) ||
-      (item.brand?.toLowerCase().includes(q) ?? false);
+      item.storePrices.some((p) => p.brand?.toLowerCase().includes(q));
     const matchesCat = !filterCat || item.category.id === filterCat;
     return matchesSearch && matchesCat;
   });
@@ -118,9 +118,6 @@ export function CompareTable({
                   <td className="py-2.5 px-4 sticky left-0 bg-background">
                     <div className="font-medium">{item.name}</div>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      {item.brand && (
-                        <span className="text-xs text-muted-foreground">{item.brand}</span>
-                      )}
                       <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
                       {item.unit && (
                         <span className="text-xs text-muted-foreground">/ {item.unit}</span>
@@ -151,6 +148,9 @@ export function CompareTable({
                             >
                               ${p.price.toFixed(2)}
                             </span>
+                            {p.brand && (
+                              <div className="text-xs text-muted-foreground mt-0.5 italic">{p.brand}</div>
+                            )}
                             <div className="text-xs text-muted-foreground mt-0.5">
                               {new Date(p.date).toLocaleDateString()}
                             </div>

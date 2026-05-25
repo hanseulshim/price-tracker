@@ -25,7 +25,6 @@ model Category {
 model Item {
   id           Int           @id @default(autoincrement())
   name         String
-  brand        String?
   unit         String?
   categoryId   Int
   category     Category      @relation(fields: [categoryId], references: [id])
@@ -39,6 +38,7 @@ model Price {
   storeId   Int
   price     Float
   quantity  Float?
+  brand     String?
   date      DateTime @default(now())
   notes     String?
   item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)

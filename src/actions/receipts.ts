@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { parseReceiptText } from "@/lib/receipt-parser";
+import { extractBrand } from "@/lib/brand-utils";
 
 export async function getReceipts() {
   return db.receipt.findMany({
@@ -65,6 +66,7 @@ export async function importReceipt(data: {
           storeId: data.storeId,
           price: ri.price,
           quantity: ri.quantity,
+          brand: extractBrand(ri.rawName) ?? undefined,
           date: data.date,
           notes: `From receipt #${receipt.id}`,
         },

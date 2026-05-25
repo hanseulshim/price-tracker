@@ -31,7 +31,6 @@ import { useRouter } from "next/navigation";
 type Item = {
   id: number;
   name: string;
-  brand: string | null;
   unit: string | null;
   categoryId: number;
   category: { id: number; name: string };
@@ -57,14 +56,12 @@ export function ItemList({
 
   // Form state
   const [formName, setFormName] = useState("");
-  const [formBrand, setFormBrand] = useState("");
   const [formUnit, setFormUnit] = useState("");
   const [formCategoryId, setFormCategoryId] = useState<number>(categories[0]?.id ?? 0);
 
   function openCreate() {
     setEditing(null);
     setFormName("");
-    setFormBrand("");
     setFormUnit("");
     setFormCategoryId(categories[0]?.id ?? 0);
     setDialogOpen(true);
@@ -73,7 +70,6 @@ export function ItemList({
   function openEdit(item: Item) {
     setEditing(item);
     setFormName(item.name);
-    setFormBrand(item.brand ?? "");
     setFormUnit(item.unit ?? "");
     setFormCategoryId(item.categoryId);
     setDialogOpen(true);
@@ -85,7 +81,6 @@ export function ItemList({
     try {
       const data = {
         name: formName.trim(),
-        brand: formBrand.trim() || undefined,
         unit: formUnit.trim() || undefined,
         categoryId: formCategoryId,
       };
@@ -120,8 +115,7 @@ export function ItemList({
     const q = search.toLowerCase();
     const matchesSearch =
       !q ||
-      item.name.toLowerCase().includes(q) ||
-      (item.brand?.toLowerCase().includes(q) ?? false);
+      item.name.toLowerCase().includes(q);
     const matchesCat = !filterCat || item.categoryId === filterCat;
     return matchesSearch && matchesCat;
   });
@@ -181,7 +175,6 @@ export function ItemList({
                 <tr key={item.id} className="border-t hover:bg-muted/30">
                   <td className="py-2.5 px-4">
                     <div className="font-medium">{item.name}</div>
-                    {item.brand && <div className="text-xs text-muted-foreground">{item.brand}</div>}
                   </td>
                   <td className="py-2.5 px-4 hidden sm:table-cell">
                     <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
@@ -218,10 +211,6 @@ export function ItemList({
             <div className="space-y-1.5">
               <Label htmlFor="item-name">Name *</Label>
               <Input id="item-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Whole Milk, Chicken Breast" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="item-brand">Brand (optional)</Label>
-              <Input id="item-brand" value={formBrand} onChange={(e) => setFormBrand(e.target.value)} placeholder="e.g. Kirkland, Great Value" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

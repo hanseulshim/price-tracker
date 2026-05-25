@@ -64,7 +64,7 @@ export default async function DashboardPage() {
                     <div key={item.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
                       <div>
                         <span className="text-sm font-medium">{item.name}</span>
-                        {item.brand && <span className="text-xs text-muted-foreground ml-1">{item.brand}</span>}
+                        {cheapest.brand && <span className="text-xs text-muted-foreground ml-1 italic">{cheapest.brand}</span>}
                       </div>
                       <div className="text-right shrink-0 ml-2">
                         <div className="text-sm font-semibold text-green-600">

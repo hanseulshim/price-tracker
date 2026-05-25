@@ -29,7 +29,6 @@ export async function getItem(id: number) {
 
 export async function createItem(data: {
   name: string;
-  brand?: string;
   unit?: string;
   categoryId: number;
 }) {
@@ -40,7 +39,7 @@ export async function createItem(data: {
 
 export async function updateItem(
   id: number,
-  data: { name: string; brand?: string; unit?: string; categoryId: number }
+  data: { name: string; unit?: string; categoryId: number }
 ) {
   const item = await db.item.update({ where: { id }, data });
   revalidatePath("/items");
@@ -57,7 +56,6 @@ export async function searchItems(query: string) {
     where: {
       OR: [
         { name: { contains: query } },
-        { brand: { contains: query } },
       ],
     },
     include: { category: true },
