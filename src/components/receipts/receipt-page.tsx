@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { parseReceipt, importReceipt, deleteReceipt } from "@/actions/receipts";
 import { createItem } from "@/actions/items";
-import { stripBrandPrefix } from "@/lib/brand-utils";
+import { stripBrandPrefix, normalizeName, guessCategory } from "@/lib/brand-utils";
 import { useRouter } from "next/navigation";
 
 type Store = { id: number; name: string };
@@ -70,6 +70,7 @@ export function ReceiptPage({
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [matchedItems, setMatchedItems] = useState<(number | "new" | "skip")[]>([]);
+  const [newItemNames, setNewItemNames] = useState<string[]>([]);
   const [newItemCategories, setNewItemCategories] = useState<number[]>([]);
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,6 +83,7 @@ export function ReceiptPage({
     setDate(new Date().toISOString().split("T")[0]);
     setParsedItems([]);
     setMatchedItems([]);
+    setNewItemNames([]);
     setNewItemCategories([]);
     setImportOpen(true);
   }
@@ -102,7 +104,15 @@ export function ReceiptPage({
         return found ? found.id : ("new" as const);
       });
       setMatchedItems(matched);
-      setNewItemCategories(parsed.map(() => categories[0]?.id ?? 0));
+      // Normalized names for new items (editable)
+      setNewItemNames(parsed.map((p) => normalizeName(p.rawName)));
+      // Smart category guess per item
+      setNewItemCategories(parsed.map((p) => {
+        const normalized = normalizeName(p.rawName);
+        const guessed = guessCategory(normalized);
+        const cat = categories.find((c) => c.name === guessed) ?? categories[0];
+        return cat?.id ?? 0;
+      }));
       setStep("review");
     } finally {
       setParsing(false);
@@ -124,9 +134,9 @@ export function ReceiptPage({
         const match = matchedItems[i];
         if (match === "skip") continue;
         if (match === "new") {
-          // Create new item
+          // Create new item using the (possibly edited) normalized name
           const newItem = await createItem({
-            name: p.rawName,
+            name: newItemNames[i]?.trim() || normalizeName(p.rawName),
             categoryId: newItemCategories[i] ?? categories[0]?.id ?? 1,
           });
           finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: newItem.id });
@@ -306,21 +316,47 @@ export function ReceiptPage({
                           </optgroup>
                         </select>
                         {matchedItems[i] === "new" && (
-                          <select
-                            className="border rounded px-2 py-1.5 text-xs bg-background"
-                            value={newItemCategories[i]}
-                            onChange={(e) => {
-                              setNewItemCategories((prev) => {
-                                const next = [...prev];
-                                next[i] = Number(e.target.value);
-                                return next;
-                              });
-                            }}
-                          >
-                            {categories.map((c) => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
+                          <div className="flex gap-2 w-full flex-wrap">
+                            <input
+                              type="text"
+                              className="flex-1 border rounded px-2 py-1.5 text-xs bg-background min-w-0"
+                              placeholder="Item name"
+                              value={newItemNames[i] ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setNewItemNames((prev) => {
+                                  const next = [...prev];
+                                  next[i] = val;
+                                  return next;
+                                });
+                                // Re-guess category when name changes
+                                const guessed = guessCategory(val);
+                                const cat = categories.find((c) => c.name === guessed);
+                                if (cat) {
+                                  setNewItemCategories((prev) => {
+                                    const next = [...prev];
+                                    next[i] = cat.id;
+                                    return next;
+                                  });
+                                }
+                              }}
+                            />
+                            <select
+                              className="border rounded px-2 py-1.5 text-xs bg-background"
+                              value={newItemCategories[i]}
+                              onChange={(e) => {
+                                setNewItemCategories((prev) => {
+                                  const next = [...prev];
+                                  next[i] = Number(e.target.value);
+                                  return next;
+                                });
+                              }}
+                            >
+                              {categories.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
                         )}
                       </div>
                     </div>
