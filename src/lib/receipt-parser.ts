@@ -204,6 +204,98 @@ function isWalmartWebFormat(text: string): boolean {
   );
 }
 
+// ─── Costco Receipt Parser ────────────────────────────────────────────────────
+// Handles copy-paste from Costco paper receipts — tab-separated lines:
+//   [E]\t<itemNum>\t<NAME>\t<price> <taxCode>
+//   \t<discountNum>\t/ <itemNum>\t<amount>-
+// Discounts are applied back to the item they reference (by item number).
+
+function titleCase(str: string): string {
+  return str.toLowerCase().replace(/(?:^|\s)\w/g, (c) => c.toUpperCase());
+}
+
+function parseCostco(text: string): ParsedItem[] {
+  const lines = text.split(/\r?\n/);
+  const items: ParsedItem[] = [];
+  // item number → index in items[]
+  const itemIndexByNum: Record<string, number> = {};
+  let lastItemIndex = -1;
+
+  for (const raw of lines) {
+    const parts = raw.split("\t");
+
+    let itemNum: string;
+    let name: string;
+    let priceField: string;
+
+    // 4 fields: [taxCode, itemNum, name, price]
+    if (parts.length >= 4) {
+      itemNum = parts[1].trim();
+      name = parts[2].trim();
+      priceField = parts[3].trim();
+    } else if (parts.length === 3) {
+      // 3 fields: [itemNum, name, price] (no leading tax code tab)
+      itemNum = parts[0].trim();
+      name = parts[1].trim();
+      priceField = parts[2].trim();
+    } else {
+      continue;
+    }
+
+    if (!name || !priceField) continue;
+
+    // Discount line: name starts with "/"
+    if (name.startsWith("/")) {
+      const discountMatch = priceField.match(/^(\d+\.\d{2})-$/);
+      if (!discountMatch) continue;
+      const discount = parseFloat(discountMatch[1]);
+
+      // Try to find the referenced item number (e.g. "/ 1271446" or "/2012084")
+      const refNum = name.replace(/^\/\s*/, "").trim();
+      if (itemIndexByNum[refNum] !== undefined) {
+        const idx = itemIndexByNum[refNum];
+        items[idx].price = Math.round((items[idx].price - discount) * 100) / 100;
+      } else if (lastItemIndex >= 0) {
+        // Fallback: apply to last item (e.g. "/WATER" reference)
+        items[lastItemIndex].price =
+          Math.round((items[lastItemIndex].price - discount) * 100) / 100;
+      }
+      continue;
+    }
+
+    // Regular item: price field like "10.79 3" or "14.99 Y" or "5.00 N"
+    const priceMatch = priceField.match(/^(\d+\.\d{2})\s+[0-9A-Z]$/);
+    if (!priceMatch) continue;
+    const price = parseFloat(priceMatch[1]);
+    if (price <= 0 || price > 9999) continue;
+
+    // Skip subtotal/tax/total summary rows
+    const strippedName = name.replace(/^\*+/, "").trim();
+    if (!strippedName || /^(SUBTOTAL|TAX|TOTAL|CMN-DONATION)/i.test(strippedName)) continue;
+
+    // Clean name: strip leading *** (Kirkland item prefix), title-case
+    const cleanName = titleCase(strippedName);
+
+    const index = items.length;
+    items.push({ rawName: cleanName, price });
+    if (itemNum) itemIndexByNum[itemNum] = index;
+    lastItemIndex = index;
+  }
+
+  // Drop any items with non-positive price after discounts
+  return items.filter((item) => item.price > 0);
+}
+
+function isCostcoFormat(text: string): boolean {
+  // Costco receipts have tab-separated lines with price codes (3/Y/N)
+  // and typically contain "Costco" or the characteristic SUBTOTAL/Total lines
+  return (
+    /costco/i.test(text) ||
+    (/\t[A-Z0-9 &*/]+\t\d+\.\d{2}\s+[3YN]\b/.test(text) &&
+      /SUBTOTAL/.test(text))
+  );
+}
+
 // ─── Date Extraction ──────────────────────────────────────────────────────────
 
 const MONTHS: Record<string, number> = {
@@ -274,7 +366,14 @@ export function extractDate(text: string): string | undefined {
 
 export function parseReceiptText(text: string): ParsedReceipt {
   const date = extractDate(text);
-  const items = isWalmartWebFormat(text) ? parseWalmartWeb(text) : parseGenericReceipt(text);
+  let items: ParsedItem[];
+  if (isCostcoFormat(text)) {
+    items = parseCostco(text);
+  } else if (isWalmartWebFormat(text)) {
+    items = parseWalmartWeb(text);
+  } else {
+    items = parseGenericReceipt(text);
+  }
   return { items, date };
 }
 

@@ -13,6 +13,7 @@ const BRAND_PREFIXES = [
   // Costco
   "kirkland signature",
   "kirkland",
+  "ks ", // Kirkland Signature abbreviation on Costco receipts
   // Lidl
   "simply nature",
   "preferred selection",
