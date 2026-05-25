@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { PriceHistoryDialog } from "@/components/items/price-history-dialog";
 
 type Store = { id: number; name: string };
 type Category = { id: number; name: string; _count: { items: number } };
@@ -37,6 +38,7 @@ export function CompareTable({
 }) {
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<number | null>(null);
+  const [historyItem, setHistoryItem] = useState<{ id: number; name: string } | null>(null);
 
   const filtered = data.filter((item) => {
     const q = search.toLowerCase();
@@ -116,7 +118,12 @@ export function CompareTable({
               return (
                 <tr key={item.id} className="border-t hover:bg-muted/20">
                   <td className="py-2.5 px-4 sticky left-0 bg-background">
-                    <div className="font-medium">{item.name}</div>
+                    <button
+                      className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                      onClick={() => setHistoryItem({ id: item.id, name: item.name })}
+                    >
+                      {item.name}
+                    </button>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
                       {item.unit && (
@@ -174,8 +181,16 @@ export function CompareTable({
       <p className="text-xs text-muted-foreground">
         Showing {filtered.length} of {data.length} items.{" "}
         <span className="text-green-600 font-medium">Green</span> = best price.{" "}
-        Prices shown are the most recent recorded price at each store.
+        Prices shown are the most recent recorded price at each store.{" "}
+        Click any item name to view price history.
       </p>
+
+      <PriceHistoryDialog
+        itemId={historyItem?.id ?? null}
+        itemName={historyItem?.name ?? ""}
+        open={historyItem !== null}
+        onClose={() => setHistoryItem(null)}
+      />
     </div>
   );
 }

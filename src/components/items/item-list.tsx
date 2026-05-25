@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { createItem, updateItem, deleteItem } from "@/actions/items";
+import { PriceHistoryDialog } from "./price-history-dialog";
 import { useRouter } from "next/navigation";
 
 type Item = {
@@ -53,6 +54,7 @@ export function ItemList({
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [historyItem, setHistoryItem] = useState<Item | null>(null);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -174,7 +176,12 @@ export function ItemList({
               {filtered.map((item) => (
                 <tr key={item.id} className="border-t hover:bg-muted/30">
                   <td className="py-2.5 px-4">
-                    <div className="font-medium">{item.name}</div>
+                    <button
+                      className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                      onClick={() => setHistoryItem(item)}
+                    >
+                      {item.name}
+                    </button>
                   </td>
                   <td className="py-2.5 px-4 hidden sm:table-cell">
                     <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
@@ -260,6 +267,12 @@ export function ItemList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <PriceHistoryDialog
+        itemId={historyItem?.id ?? null}
+        itemName={historyItem?.name ?? ""}
+        open={historyItem !== null}
+        onClose={() => setHistoryItem(null)}
+      />
     </>
   );
 }
