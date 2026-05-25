@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { parseReceipt, importReceipt, deleteReceipt } from "@/actions/receipts";
 import { createItem } from "@/actions/items";
+import { stripBrandPrefix } from "@/lib/brand-utils";
 import { useRouter } from "next/navigation";
 
 type Store = { id: number; name: string };
@@ -92,14 +93,13 @@ export function ReceiptPage({
     try {
       const parsed = await parseReceipt(rawText);
       setParsedItems(parsed);
-      // Auto-match by fuzzy name
+      // Auto-match by fuzzy name, stripping store brand prefixes before comparison
       const matched = parsed.map((p) => {
-        const q = p.rawName.toLowerCase();
-        const found = items.find(
-          (i) =>
-            i.name.toLowerCase().includes(q) ||
-            q.includes(i.name.toLowerCase())
-        );
+        const q = stripBrandPrefix(p.rawName).toLowerCase();
+        const found = items.find((i) => {
+          const iName = stripBrandPrefix(i.name).toLowerCase();
+          return iName.includes(q) || q.includes(iName);
+        });
         return found ? found.id : ("new" as const);
       });
       setMatchedItems(matched);
