@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Layers } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +27,7 @@ type ItemData = {
   cheapestStoreId: number | null;
 };
 
-type SortKey = "name" | "category" | "savings" | `store-${number}`;
+type SortKey = "name" | "savings" | `store-${number}`;
 type SortDir = "asc" | "desc";
 
 function SortButton({
@@ -66,6 +66,7 @@ export function CompareTable({
   const [historyItem, setHistoryItem] = useState<{ id: number; name: string } | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [groupByCategory, setGroupByCategory] = useState(false);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -97,8 +98,6 @@ export function CompareTable({
       let cmp = 0;
       if (sortKey === "name") {
         cmp = a.name.localeCompare(b.name);
-      } else if (sortKey === "category") {
-        cmp = a.category.name.localeCompare(b.category.name) || a.name.localeCompare(b.name);
       } else if (sortKey === "savings") {
         const savingsA = (() => {
           const prices = a.storePrices.map((p) => p.price);
@@ -155,6 +154,18 @@ export function CompareTable({
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        <button
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-md border text-sm font-medium transition-colors",
+            groupByCategory
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background text-foreground hover:bg-muted"
+          )}
+          onClick={() => setGroupByCategory((v) => !v)}
+        >
+          <Layers className="h-4 w-4" />
+          Group by Category
+        </button>
       </div>
 
       <div className="rounded-lg border overflow-x-auto">
@@ -162,20 +173,12 @@ export function CompareTable({
           <thead className="bg-muted/50">
             <tr>
               <th className="text-left py-3 px-4 font-medium sticky left-0 bg-muted/50 min-w-[180px]">
-                <div className="flex items-center gap-3">
-                  <button
-                    className={cn("hover:text-foreground transition-colors flex items-center gap-1", sortKey === "name" ? "text-foreground" : "text-muted-foreground")}
-                    onClick={() => handleSort("name")}
-                  >
-                    Item {sortKey === "name" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />) : <ArrowUpDown className="h-3 w-3 inline opacity-40" />}
-                  </button>
-                  <button
-                    className={cn("hover:text-foreground transition-colors flex items-center gap-1 text-xs", sortKey === "category" ? "text-foreground" : "text-muted-foreground")}
-                    onClick={() => handleSort("category")}
-                  >
-                    Cat {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />) : <ArrowUpDown className="h-3 w-3 inline opacity-40" />}
-                  </button>
-                </div>
+                <button
+                  className={cn("hover:text-foreground transition-colors flex items-center gap-1", sortKey === "name" ? "text-foreground" : "text-muted-foreground")}
+                  onClick={() => handleSort("name")}
+                >
+                  Item {sortKey === "name" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />) : <ArrowUpDown className="h-3 w-3 inline opacity-40" />}
+                </button>
               </th>
               {activeStores.map((store) => (
                 <th key={store.id} className="text-center py-3 px-4 font-medium whitespace-nowrap min-w-[110px]">
@@ -200,83 +203,103 @@ export function CompareTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item) => {
-              const priceMap = new Map(
-                item.storePrices.map((p) => [p.storeId, p])
-              );
-              const prices = item.storePrices.map((p) => p.price);
-              const minPrice = prices.length ? Math.min(...prices) : null;
-              const maxPrice = prices.length ? Math.max(...prices) : null;
+            {(() => {
+              const colSpan = activeStores.length + 2; // item + stores + savings
 
-              return (
-                <tr key={item.id} className="border-t hover:bg-muted/20">
-                  <td className="py-2.5 px-4 sticky left-0 bg-background">
-                    <button
-                      className="font-medium text-left hover:text-primary hover:underline transition-colors"
-                      onClick={() => setHistoryItem({ id: item.id, name: item.name })}
-                    >
-                      {item.name}
-                    </button>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
-                      {item.unit && (
-                        <span className="text-xs text-muted-foreground">/ {item.unit}</span>
-                      )}
-                    </div>
-                  </td>
-                  {activeStores.map((store) => {
-                    const p = priceMap.get(store.id);
-                    const isCheapest = minPrice !== null && p?.price === minPrice && prices.length > 1;
-                    const isMostExpensive = maxPrice !== null && p?.price === maxPrice && prices.length > 1;
-                    return (
-                      <td
-                        key={store.id}
-                        className={cn(
-                          "py-2.5 px-4 text-center",
-                          isCheapest && "bg-green-50 dark:bg-green-950/30",
-                          isMostExpensive && !isCheapest && "bg-red-50/50 dark:bg-red-950/20"
-                        )}
+              function renderItemRow(item: ItemData) {
+                const priceMap = new Map(item.storePrices.map((p) => [p.storeId, p]));
+                const prices = item.storePrices.map((p) => p.price);
+                const minPrice = prices.length ? Math.min(...prices) : null;
+                const maxPrice = prices.length ? Math.max(...prices) : null;
+                return (
+                  <tr key={item.id} className="border-t hover:bg-muted/20">
+                    <td className="py-2.5 px-4 sticky left-0 bg-background">
+                      <button
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                        onClick={() => setHistoryItem({ id: item.id, name: item.name })}
                       >
-                        {p ? (
-                          <div>
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                isCheapest && "text-green-700 dark:text-green-400",
-                                isMostExpensive && !isCheapest && "text-red-600 dark:text-red-400"
-                              )}
-                            >
-                              ${p.price.toFixed(2)}
-                            </span>
-                            {p.brand && (
-                              <div className="text-xs text-muted-foreground mt-0.5 italic">{p.brand}</div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {new Date(p.date).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
+                        {item.name}
+                      </button>
+                      {!groupByCategory && (
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
+                          {item.unit && <span className="text-xs text-muted-foreground">/ {item.unit}</span>}
+                        </div>
+                      )}
+                      {groupByCategory && item.unit && (
+                        <div className="text-xs text-muted-foreground mt-0.5">/ {item.unit}</div>
+                      )}
+                    </td>
+                    {activeStores.map((store) => {
+                      const p = priceMap.get(store.id);
+                      const isCheapest = minPrice !== null && p?.price === minPrice && prices.length > 1;
+                      const isMostExpensive = maxPrice !== null && p?.price === maxPrice && prices.length > 1;
+                      return (
+                        <td
+                          key={store.id}
+                          className={cn(
+                            "py-2.5 px-4 text-center",
+                            isCheapest && "bg-green-50 dark:bg-green-950/30",
+                            isMostExpensive && !isCheapest && "bg-red-50/50 dark:bg-red-950/20"
+                          )}
+                        >
+                          {p ? (
+                            <div>
+                              <span className={cn("font-semibold", isCheapest && "text-green-700 dark:text-green-400", isMostExpensive && !isCheapest && "text-red-600 dark:text-red-400")}>
+                                ${p.price.toFixed(2)}
+                              </span>
+                              {p.brand && <div className="text-xs text-muted-foreground mt-0.5 italic">{p.brand}</div>}
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {new Date(p.date).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
+                              </div>
+                              {isCheapest && prices.length > 1 && <div className="text-xs text-green-600 font-medium">Best price</div>}
                             </div>
-                            {isCheapest && prices.length > 1 && (
-                              <div className="text-xs text-green-600 font-medium">Best price</div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                  {/* Savings column */}
-                  <td className="py-2.5 px-4 text-center">
-                    {prices.length >= 2 ? (
-                      <span className="text-emerald-600 font-medium text-sm">
-                        ${(Math.max(...prices) - Math.min(...prices)).toFixed(2)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </td>
-                </tr>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="py-2.5 px-4 text-center">
+                      {prices.length >= 2 ? (
+                        <span className="text-emerald-600 font-medium text-sm">
+                          ${(Math.max(...prices) - Math.min(...prices)).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              }
+
+              if (!groupByCategory) {
+                return filtered.map(renderItemRow);
+              }
+
+              // Group by category, sorted alpha within each group
+              const groups = new Map<string, { catName: string; items: ItemData[] }>();
+              for (const item of filtered) {
+                const key = item.category.name;
+                if (!groups.has(key)) groups.set(key, { catName: key, items: [] });
+                groups.get(key)!.items.push(item);
+              }
+              const sortedGroups = Array.from(groups.values()).sort((a, b) =>
+                a.catName.localeCompare(b.catName)
               );
-            })}
+
+              return sortedGroups.flatMap(({ catName, items }) => [
+                <tr key={`cat-${catName}`} className="border-t">
+                  <td
+                    colSpan={colSpan}
+                    className="py-2 px-4 bg-muted/60 text-xs font-semibold uppercase tracking-wider text-muted-foreground sticky left-0"
+                  >
+                    {catName} <span className="font-normal normal-case">({items.length})</span>
+                  </td>
+                </tr>,
+                ...items.map(renderItemRow),
+              ]);
+            })()}
           </tbody>
         </table>
       </div>
