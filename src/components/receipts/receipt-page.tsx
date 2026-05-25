@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { parseReceipt, importReceipt, deleteReceipt } from "@/actions/receipts";
+import { parseReceipt, importReceipt, deleteReceipt, getReceipt } from "@/actions/receipts";
 import { createItem } from "@/actions/items";
 import { stripBrandPrefix, normalizeName, guessCategory } from "@/lib/brand-utils";
 import { useRouter } from "next/navigation";
@@ -75,6 +75,23 @@ export function ReceiptPage({
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  type ReceiptDetail = Awaited<ReturnType<typeof getReceipt>>;
+  const [expandedDetails, setExpandedDetails] = useState<Record<number, ReceiptDetail>>({});
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+
+  async function toggleExpand(id: number) {
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(id);
+    if (!expandedDetails[id]) {
+      setLoadingId(id);
+      const detail = await getReceipt(id);
+      setExpandedDetails((prev) => ({ ...prev, [id]: detail }));
+      setLoadingId(null);
+    }
+  }
 
   function openImport() {
     setStep("paste");
@@ -204,7 +221,7 @@ export function ReceiptPage({
                   <div className="flex items-center gap-3">
                     <button
                       className="flex items-center gap-2 text-left"
-                      onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                      onClick={() => toggleExpand(r.id)}
                     >
                       {expandedId === r.id ? (
                         <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -230,6 +247,40 @@ export function ReceiptPage({
                   </Button>
                 </div>
               </CardContent>
+              {expandedId === r.id && (
+                <div className="border-t px-4 pb-3">
+                  {loadingId === r.id ? (
+                    <p className="text-sm text-muted-foreground py-3">Loading…</p>
+                  ) : expandedDetails[r.id]?.items.length ? (
+                    <table className="w-full text-sm mt-3">
+                      <thead>
+                        <tr className="text-left text-xs text-muted-foreground border-b">
+                          <th className="pb-1 font-medium">Item</th>
+                          <th className="pb-1 font-medium">Category</th>
+                          <th className="pb-1 font-medium text-right">Qty</th>
+                          <th className="pb-1 font-medium text-right">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {expandedDetails[r.id]!.items.map((ri) => (
+                          <tr key={ri.id} className="border-b last:border-0">
+                            <td className="py-1.5 pr-3">
+                              <span className="font-medium">{ri.item?.name ?? ri.rawName}</span>
+                            </td>
+                            <td className="py-1.5 pr-3 text-xs text-muted-foreground">
+                              {ri.item?.category?.name ?? "—"}
+                            </td>
+                            <td className="py-1.5 pr-3 text-right text-muted-foreground">{ri.quantity ?? 1}</td>
+                            <td className="py-1.5 text-right font-medium text-emerald-700">${ri.price.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-3">No items found.</p>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>
