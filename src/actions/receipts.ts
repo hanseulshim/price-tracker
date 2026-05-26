@@ -53,6 +53,7 @@ export async function importReceipt(data: {
     quantity?: number;
     itemId?: number;
     externalId?: string;
+    originalPrice?: number;
   }>;
 }) {
   const receipt = await db.receipt.create({
@@ -80,6 +81,10 @@ export async function importReceipt(data: {
   });
 
   // Save prices for matched items
+  // Build an index from rawName → originalPrice from input data
+  const originalPriceMap = new Map(
+    data.items.map((item) => [item.rawName, item.originalPrice])
+  );
   for (const ri of receipt.items) {
     if (ri.itemId) {
       await db.price.create({
@@ -87,6 +92,7 @@ export async function importReceipt(data: {
           itemId: ri.itemId,
           storeId: data.storeId,
           price: ri.price,
+          originalPrice: originalPriceMap.get(ri.rawName),
           quantity: ri.quantity,
           brand: extractBrand(ri.rawName) ?? undefined,
           date: data.date,

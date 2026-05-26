@@ -213,6 +213,12 @@ export function PriceHistoryDialog({
                         <span className="font-semibold text-emerald-700">
                           ${p.price.toFixed(2)}
                         </span>
+                        {p.originalPrice && (
+                          <div className="text-xs text-muted-foreground line-through">${p.originalPrice.toFixed(2)}</div>
+                        )}
+                        {p.originalPrice && (
+                          <div className="text-xs text-orange-600 font-medium">Sale −${(p.originalPrice - p.price).toFixed(2)}</div>
+                        )}
                       </td>
                     </tr>
                   ))}

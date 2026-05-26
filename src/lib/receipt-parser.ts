@@ -3,6 +3,7 @@ export interface ParsedItem {
   price: number;
   quantity?: number;
   externalId?: string; // store-specific item number (e.g. Costco item #)
+  originalPrice?: number; // pre-discount price, if the item was on sale
 }
 
 export interface ParsedReceipt {
@@ -95,10 +96,12 @@ function isWalmartItemName(line: string): boolean {
 function extractWalmartItemPrice(block: string[]): {
   price: number | null;
   qty: number;
+  originalPrice?: number;
 } {
   let qty = 1;
   const prices: { index: number; value: number }[] = [];
   let wasIndex = -1;
+  let wasPrice: number | undefined;
 
   for (let i = 0; i < block.length; i++) {
     const line = block[i];
@@ -109,8 +112,10 @@ function extractWalmartItemPrice(block: string[]): {
       continue;
     }
 
-    if (/^Was \$/.test(line)) {
+    const wasMatch = line.match(/^Was \$(\d+\.\d{2})$/);
+    if (wasMatch) {
       wasIndex = i;
+      wasPrice = parseFloat(wasMatch[1]);
       continue;
     }
 
@@ -137,11 +142,14 @@ function extractWalmartItemPrice(block: string[]): {
   }
 
   let finalPrice: number | null = null;
+  let originalPrice: number | undefined;
+
   if (wasIndex >= 0) {
     // Item had a discount — use the last plain price BEFORE "Was $X"
     const beforeWas = prices.filter((p) => p.index < wasIndex);
     if (beforeWas.length > 0) {
       finalPrice = beforeWas[beforeWas.length - 1].value;
+      originalPrice = wasPrice;
     }
   } else {
     // No discount — use last plain price
@@ -150,7 +158,7 @@ function extractWalmartItemPrice(block: string[]): {
     }
   }
 
-  return { price: finalPrice, qty };
+  return { price: finalPrice, qty, originalPrice };
 }
 
 function parseWalmartWeb(text: string): ParsedItem[] {
@@ -166,13 +174,15 @@ function parseWalmartWeb(text: string): ParsedItem[] {
 
   function flushItem() {
     if (!currentItemName || currentSection === "Unavailable") return;
-    const { price, qty } = extractWalmartItemPrice(currentBlock);
+    const { price, qty, originalPrice } = extractWalmartItemPrice(currentBlock);
     if (price === null || price <= 0) return;
     const unitPrice = Math.round((price / qty) * 100) / 100;
+    const unitOriginal = originalPrice ? Math.round((originalPrice / qty) * 100) / 100 : undefined;
     items.push({
       rawName: cleanItemName(currentItemName),
       price: unitPrice,
       quantity: qty > 1 ? qty : undefined,
+      originalPrice: unitOriginal,
     });
   }
 
@@ -260,11 +270,12 @@ function parseCostco(text: string): ParsedItem[] {
       const refNum = name.replace(/^\/\s*/, "").trim();
       if (itemIndexByNum[refNum] !== undefined) {
         const idx = itemIndexByNum[refNum];
+        if (items[idx].originalPrice === undefined) items[idx].originalPrice = items[idx].price;
         items[idx].price = Math.round((items[idx].price - discount) * 100) / 100;
       } else if (lastItemIndex >= 0) {
         // Fallback: apply to last item (e.g. "/WATER" reference)
-        items[lastItemIndex].price =
-          Math.round((items[lastItemIndex].price - discount) * 100) / 100;
+        if (items[lastItemIndex].originalPrice === undefined) items[lastItemIndex].originalPrice = items[lastItemIndex].price;
+        items[lastItemIndex].price = Math.round((items[lastItemIndex].price - discount) * 100) / 100;
       }
       continue;
     }

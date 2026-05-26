@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileText, Upload, Trash2, ChevronDown, ChevronUp, Check, MapPin, Search, ExternalLink } from "lucide-react";
+import { FileText, Upload, Trash2, ChevronDown, ChevronUp, Check, MapPin, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +41,7 @@ type Item = {
   category: { id: number; name: string };
 };
 
-type ParsedItem = { rawName: string; price: number; quantity?: number; externalId?: string };
+type ParsedItem = { rawName: string; price: number; quantity?: number; externalId?: string; originalPrice?: number };
 
 type Receipt = {
   id: number;
@@ -155,20 +155,23 @@ export function ReceiptPage({
         return found ? found.id : ("new" as const);
       });
       setMatchedItems(matched);
-      setNewItemNames(parsed.map((p) => normalizeName(p.rawName)));
-      setNewItemCategories(parsed.map((p) => {
+      const initialNames = parsed.map((p) => normalizeName(p.rawName));
+      const initialCats = parsed.map((p) => {
         const normalized = normalizeName(p.rawName);
         const guessed = guessCategory(normalized);
         const cat = categories.find((c) => c.name === guessed) ?? categories[0];
         return cat?.id ?? 0;
-      }));
+      });
+      setNewItemNames(initialNames);
+      setNewItemCategories(initialCats);
+      // Kick off auto-lookups (don't await — runs in background while user edits)
+      runAutoLookups(parsed, initialNames, initialCats);
     } finally {
       setParsing(false);
     }
   }
 
   function handleGoToReview() {
-    // Re-run matching with current items prop
     const matched = parsedItems.map((p) => {
       const q = stripBrandPrefix(p.rawName).toLowerCase();
       const found = items.find((i) => {
@@ -181,40 +184,45 @@ export function ReceiptPage({
     setStep("review");
   }
 
-  async function handleLookup(i: number, externalId: string) {
-    if (lookingUp[i]) return;
-    // Use cache if already fetched
-    if (lookupCache[externalId] !== undefined) {
-      const info = lookupCache[externalId];
-      if (info) applyLookup(i, info);
-      return;
-    }
-    setLookingUp((prev) => ({ ...prev, [i]: true }));
-    const info = await lookupCostcoItem(externalId);
-    setLookupCache((prev) => ({ ...prev, [externalId]: info }));
-    setLookingUp((prev) => ({ ...prev, [i]: false }));
-    if (info) applyLookup(i, info);
-    else toast.error("Couldn't find product details");
-  }
+  // Called after parse — fires all Costco lookups in parallel and applies results
+  async function runAutoLookups(parsed: ParsedItem[], initialNames: string[], initialCats: number[]) {
+    const toFetch = parsed
+      .map((p, i) => ({ i, externalId: p.externalId }))
+      .filter((x): x is { i: number; externalId: string } => !!x.externalId);
 
-  function applyLookup(i: number, info: CostcoItemInfo) {
-    setNewItemNames((prev) => {
-      const next = [...prev];
-      next[i] = info.name;
-      return next;
+    if (toFetch.length === 0) return;
+
+    // Mark all as loading
+    const loadingMap: Record<number, boolean> = {};
+    toFetch.forEach(({ i }) => { loadingMap[i] = true; });
+    setLookingUp(loadingMap);
+
+    const results = await Promise.allSettled(
+      toFetch.map(({ externalId }) => lookupCostcoItem(externalId))
+    );
+
+    const newNames = [...initialNames];
+    const newCats = [...initialCats];
+    const newCache: Record<string, CostcoItemInfo | null> = {};
+
+    results.forEach((result, idx) => {
+      const { i, externalId } = toFetch[idx];
+      const info = result.status === "fulfilled" ? result.value : null;
+      newCache[externalId] = info;
+      if (info) {
+        newNames[i] = info.name;
+        const warehouseCat = info.category?.toLowerCase() ?? "";
+        const guessed = guessCategory(info.name) ||
+          categories.find((c) => warehouseCat.includes(c.name.toLowerCase()))?.name;
+        const cat = categories.find((c) => c.name === guessed) ?? categories[0];
+        if (cat) newCats[i] = cat.id;
+      }
     });
-    // Update category guess based on WarehouseRunner category
-    const warehouseCat = info.category?.toLowerCase() ?? "";
-    const guessed = guessCategory(info.name) ||
-      categories.find((c) => warehouseCat.includes(c.name.toLowerCase()))?.name;
-    const cat = categories.find((c) => c.name === guessed) ?? categories[0];
-    if (cat) {
-      setNewItemCategories((prev) => {
-        const next = [...prev];
-        next[i] = cat.id;
-        return next;
-      });
-    }
+
+    setLookupCache(newCache);
+    setNewItemNames(newNames);
+    setNewItemCategories(newCats);
+    setLookingUp({});
   }
 
   async function handleImport() {
@@ -226,6 +234,7 @@ export function ReceiptPage({
         quantity?: number;
         itemId?: number;
         externalId?: string;
+        originalPrice?: number;
       }> = [];
 
       for (let i = 0; i < parsedItems.length; i++) {
@@ -237,9 +246,9 @@ export function ReceiptPage({
             name: newItemNames[i]?.trim() || normalizeName(p.rawName),
             categoryId: newItemCategories[i] ?? categories[0]?.id ?? 1,
           });
-          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: newItem.id, externalId: p.externalId });
+          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: newItem.id, externalId: p.externalId, originalPrice: p.originalPrice });
         } else {
-          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: match, externalId: p.externalId });
+          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: match, externalId: p.externalId, originalPrice: p.originalPrice });
         }
       }
 
@@ -514,26 +523,25 @@ export function ReceiptPage({
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {p.externalId && (
-                            <button
-                              type="button"
-                              title="Look up product details"
-                              className={cn(
-                                "flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors",
-                                lookingUp[i]
-                                  ? "opacity-50 cursor-wait"
-                                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                              )}
-                              onClick={() => handleLookup(i, p.externalId!)}
-                              disabled={lookingUp[i]}
-                            >
+                            <span className={cn(
+                              "flex items-center gap-1 text-xs px-1.5 py-0.5 rounded",
+                              lookingUp[i]
+                                ? "text-muted-foreground"
+                                : lookupCache[p.externalId]
+                                  ? "text-green-600"
+                                  : "text-amber-500"
+                            )}>
                               {lookingUp[i] ? (
-                                <span>Looking up…</span>
+                                <>
+                                  <span className="animate-spin inline-block h-3 w-3 border border-current border-t-transparent rounded-full" />
+                                  Looking up…
+                                </>
                               ) : lookupCache[p.externalId] ? (
-                                <><Check className="h-3 w-3 text-green-600" /> Found</>
+                                <><Check className="h-3 w-3" /> Found</>
                               ) : (
-                                <><Search className="h-3 w-3" /> Lookup</>
+                                "Not found"
                               )}
-                            </button>
+                            </span>
                           )}
                           {p.externalId && (
                             <a
@@ -546,7 +554,10 @@ export function ReceiptPage({
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           )}
-                          <span className="text-sm font-semibold">${p.price.toFixed(2)}</span>
+                          <span className="text-sm font-semibold text-emerald-700">${p.price.toFixed(2)}</span>
+                          {p.originalPrice && (
+                            <span className="text-xs text-muted-foreground line-through">${p.originalPrice.toFixed(2)}</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">

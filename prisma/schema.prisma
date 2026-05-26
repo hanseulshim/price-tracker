@@ -33,16 +33,17 @@ model Item {
 }
 
 model Price {
-  id        Int      @id @default(autoincrement())
-  itemId    Int
-  storeId   Int
-  price     Float
-  quantity  Float?
-  brand     String?
-  date      DateTime @default(now())
-  notes     String?
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id            Int      @id @default(autoincrement())
+  itemId        Int
+  storeId       Int
+  price         Float
+  originalPrice Float?   // pre-sale/pre-discount price, if item was on sale
+  quantity      Float?
+  brand         String?
+  date          DateTime @default(now())
+  notes         String?
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 
 model Receipt {

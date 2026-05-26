@@ -19,6 +19,7 @@ type ItemData = {
   storePrices: Array<{
     id: number;
     price: number;
+    originalPrice: number | null;
     storeId: number;
     brand: string | null;
     date: Date;
@@ -248,10 +249,18 @@ export function CompareTable({
                               <span className={cn("font-semibold", isCheapest && "text-green-700 dark:text-green-400", isMostExpensive && !isCheapest && "text-red-600 dark:text-red-400")}>
                                 ${p.price.toFixed(2)}
                               </span>
+                              {p.originalPrice && (
+                                <span className="text-xs text-muted-foreground line-through ml-1">${p.originalPrice.toFixed(2)}</span>
+                              )}
                               {p.brand && <div className="text-xs text-muted-foreground mt-0.5 italic">{p.brand}</div>}
                               <div className="text-xs text-muted-foreground mt-0.5">
                                 {new Date(p.date).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
                               </div>
+                              {p.originalPrice && (
+                                <div className="text-xs text-orange-600 font-medium">
+                                  Sale −${(p.originalPrice - p.price).toFixed(2)}
+                                </div>
+                              )}
                               {isCheapest && prices.length > 1 && <div className="text-xs text-green-600 font-medium">Best price</div>}
                             </div>
                           ) : (
