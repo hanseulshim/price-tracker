@@ -11,6 +11,10 @@ export async function getReceipts() {
       id: true,
       date: true,
       orderNumber: true,
+      addressLine1: true,
+      addressCity: true,
+      addressState: true,
+      addressZip: true,
       notes: true,
       store: { select: { name: true } },
       _count: { select: { items: true } },
@@ -38,6 +42,10 @@ export async function importReceipt(data: {
   date: Date;
   rawText: string;
   orderNumber?: string;
+  addressLine1?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZip?: string;
   notes?: string;
   items: Array<{
     rawName: string;
@@ -52,6 +60,10 @@ export async function importReceipt(data: {
       date: data.date,
       rawText: data.rawText,
       orderNumber: data.orderNumber,
+      addressLine1: data.addressLine1,
+      addressCity: data.addressCity,
+      addressState: data.addressState,
+      addressZip: data.addressZip,
       notes: data.notes,
       items: {
         create: data.items.map((item) => ({

@@ -8,7 +8,10 @@ export interface ParsedReceipt {
   items: ParsedItem[];
   date?: string;       // ISO date string YYYY-MM-DD if detected
   orderNumber?: string; // e.g. "2000147-33985221"
-  storeAddress?: string; // e.g. "4725 W Ox Rd, Fairfax, VA 22030"
+  addressLine1?: string; // e.g. "4725 W Ox Rd"
+  addressCity?: string;  // e.g. "Fairfax"
+  addressState?: string; // e.g. "VA"
+  addressZip?: string;   // e.g. "22030"
 }
 
 // Lines to skip that match common receipt noise
@@ -385,36 +388,47 @@ export function extractOrderNumber(text: string): string | undefined {
 }
 
 /**
- * Extracts a store address from receipt text.
+ * Extracts a structured store address from receipt text.
  * Handles Costco paper receipts which have the address in the header:
  *   Costco Wholesale
  *   FAIRFAX #204
  *   4725 W OX RD
  *   FAIRFAX, VA 22030
  */
-export function extractStoreAddress(text: string): string | undefined {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+export interface ParsedAddress {
+  addressLine1?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZip?: string;
+}
 
-  // Costco: look for a street address line (number + street) followed by a city, state ZIP line
+export function extractStoreAddress(text: string): ParsedAddress {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const toTitle = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase()).trim();
+
   for (let i = 0; i < Math.min(lines.length, 15); i++) {
-    const streetMatch = lines[i].match(/^\d+\s+[A-Z0-9].{3,}/);
-    if (streetMatch && i + 1 < lines.length) {
+    // Street line: starts with digits followed by at least a few chars
+    if (/^\d+\s+[A-Z0-9].{3,}/.test(lines[i]) && i + 1 < lines.length) {
       const cityLine = lines[i + 1];
-      if (/[A-Z]{2}\s+\d{5}/.test(cityLine)) {
-        // Title-case the address
-        const street = lines[i].replace(/\b\w/g, (c) => c.toUpperCase());
-        const city = cityLine.replace(/\b\w/g, (c) => c.toUpperCase());
-        return `${street}, ${city}`;
+      // "CITY, ST 12345" or "CITY ST 12345"
+      const cityMatch = cityLine.match(/^([A-Z][A-Z\s]+?),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+      if (cityMatch) {
+        return {
+          addressLine1: toTitle(lines[i]),
+          addressCity: toTitle(cityMatch[1]),
+          addressState: cityMatch[2],
+          addressZip: cityMatch[3],
+        };
       }
     }
   }
-  return undefined;
+  return {};
 }
 
 export function parseReceiptText(text: string): ParsedReceipt {
   const date = extractDate(text);
   const orderNumber = extractOrderNumber(text);
-  const storeAddress = extractStoreAddress(text);
+  const addr = extractStoreAddress(text);
   let items: ParsedItem[];
   if (isCostcoFormat(text)) {
     items = parseCostco(text);
@@ -423,7 +437,7 @@ export function parseReceiptText(text: string): ParsedReceipt {
   } else {
     items = parseGenericReceipt(text);
   }
-  return { items, date, orderNumber, storeAddress };
+  return { items, date, orderNumber, ...addr };
 }
 
 function parseGenericReceipt(text: string): ParsedItem[] {
