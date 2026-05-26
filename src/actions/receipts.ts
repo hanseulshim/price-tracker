@@ -52,6 +52,7 @@ export async function importReceipt(data: {
     price: number;
     quantity?: number;
     itemId?: number;
+    externalId?: string;
   }>;
 }) {
   const receipt = await db.receipt.create({
@@ -71,6 +72,7 @@ export async function importReceipt(data: {
           price: item.price,
           quantity: item.quantity,
           itemId: item.itemId,
+          externalId: item.externalId,
         })),
       },
     },

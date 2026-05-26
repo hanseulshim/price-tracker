@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileText, Upload, Trash2, ChevronDown, ChevronUp, Check, MapPin } from "lucide-react";
+import { FileText, Upload, Trash2, ChevronDown, ChevronUp, Check, MapPin, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { parseReceipt, importReceipt, deleteReceipt, getReceipt } from "@/actions/receipts";
+import { lookupCostcoItem, type CostcoItemInfo } from "@/actions/lookup";
 import { createItem } from "@/actions/items";
 import { stripBrandPrefix, normalizeName, guessCategory } from "@/lib/brand-utils";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ type Item = {
   category: { id: number; name: string };
 };
 
-type ParsedItem = { rawName: string; price: number; quantity?: number };
+type ParsedItem = { rawName: string; price: number; quantity?: number; externalId?: string };
 
 type Receipt = {
   id: number;
@@ -88,6 +89,8 @@ export function ReceiptPage({
   const [addressZip, setAddressZip] = useState("");
   const [notes, setNotes] = useState("");
   const [parsed, setParsed] = useState(false);
+  const [lookupCache, setLookupCache] = useState<Record<string, CostcoItemInfo | null>>({});
+  const [lookingUp, setLookingUp] = useState<Record<number, boolean>>({});
   const [expandedId, setExpandedId] = useState<number | null>(null);
   type ReceiptDetail = Awaited<ReturnType<typeof getReceipt>>;
   const [expandedDetails, setExpandedDetails] = useState<Record<number, ReceiptDetail>>({});
@@ -123,6 +126,8 @@ export function ReceiptPage({
     setAddressZip("");
     setNotes("");
     setParsed(false);
+    setLookupCache({});
+    setLookingUp({});
     setImportOpen(true);
   }
 
@@ -176,6 +181,42 @@ export function ReceiptPage({
     setStep("review");
   }
 
+  async function handleLookup(i: number, externalId: string) {
+    if (lookingUp[i]) return;
+    // Use cache if already fetched
+    if (lookupCache[externalId] !== undefined) {
+      const info = lookupCache[externalId];
+      if (info) applyLookup(i, info);
+      return;
+    }
+    setLookingUp((prev) => ({ ...prev, [i]: true }));
+    const info = await lookupCostcoItem(externalId);
+    setLookupCache((prev) => ({ ...prev, [externalId]: info }));
+    setLookingUp((prev) => ({ ...prev, [i]: false }));
+    if (info) applyLookup(i, info);
+    else toast.error("Couldn't find product details");
+  }
+
+  function applyLookup(i: number, info: CostcoItemInfo) {
+    setNewItemNames((prev) => {
+      const next = [...prev];
+      next[i] = info.name;
+      return next;
+    });
+    // Update category guess based on WarehouseRunner category
+    const warehouseCat = info.category?.toLowerCase() ?? "";
+    const guessed = guessCategory(info.name) ||
+      categories.find((c) => warehouseCat.includes(c.name.toLowerCase()))?.name;
+    const cat = categories.find((c) => c.name === guessed) ?? categories[0];
+    if (cat) {
+      setNewItemCategories((prev) => {
+        const next = [...prev];
+        next[i] = cat.id;
+        return next;
+      });
+    }
+  }
+
   async function handleImport() {
     setSaving(true);
     try {
@@ -184,6 +225,7 @@ export function ReceiptPage({
         price: number;
         quantity?: number;
         itemId?: number;
+        externalId?: string;
       }> = [];
 
       for (let i = 0; i < parsedItems.length; i++) {
@@ -195,9 +237,9 @@ export function ReceiptPage({
             name: newItemNames[i]?.trim() || normalizeName(p.rawName),
             categoryId: newItemCategories[i] ?? categories[0]?.id ?? 1,
           });
-          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: newItem.id });
+          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: newItem.id, externalId: p.externalId });
         } else {
-          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: match });
+          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: match, externalId: p.externalId });
         }
       }
 
@@ -461,9 +503,51 @@ export function ReceiptPage({
                 <div className="space-y-1.5 max-h-[50vh] overflow-y-auto">
                   {parsedItems.map((p, i) => (
                     <div key={i} className="border rounded-md p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{p.rawName}</span>
-                        <span className="text-sm font-semibold">${p.price.toFixed(2)}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium text-sm truncate">{p.rawName}</span>
+                          {p.externalId && (
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                              #{p.externalId}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {p.externalId && (
+                            <button
+                              type="button"
+                              title="Look up product details"
+                              className={cn(
+                                "flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors",
+                                lookingUp[i]
+                                  ? "opacity-50 cursor-wait"
+                                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                              )}
+                              onClick={() => handleLookup(i, p.externalId!)}
+                              disabled={lookingUp[i]}
+                            >
+                              {lookingUp[i] ? (
+                                <span>Looking up…</span>
+                              ) : lookupCache[p.externalId] ? (
+                                <><Check className="h-3 w-3 text-green-600" /> Found</>
+                              ) : (
+                                <><Search className="h-3 w-3" /> Lookup</>
+                              )}
+                            </button>
+                          )}
+                          {p.externalId && (
+                            <a
+                              href={`https://app.warehouserunner.com/costco/${p.externalId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-foreground p-1"
+                              title="View on WarehouseRunner"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                          <span className="text-sm font-semibold">${p.price.toFixed(2)}</span>
+                        </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         <select

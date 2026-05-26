@@ -68,6 +68,7 @@ model ReceiptItem {
   rawName    String
   price      Float
   quantity   Float?
+  externalId String?  // store-specific item number (e.g. Costco item #)
   receipt    Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
   item       Item?    @relation(fields: [itemId], references: [id], onDelete: SetNull)
 }

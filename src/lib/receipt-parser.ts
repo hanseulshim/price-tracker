@@ -2,6 +2,7 @@ export interface ParsedItem {
   rawName: string;
   price: number;
   quantity?: number;
+  externalId?: string; // store-specific item number (e.g. Costco item #)
 }
 
 export interface ParsedReceipt {
@@ -282,7 +283,7 @@ function parseCostco(text: string): ParsedItem[] {
     const cleanName = titleCase(strippedName);
 
     const index = items.length;
-    items.push({ rawName: cleanName, price });
+    items.push({ rawName: cleanName, price, externalId: itemNum || undefined });
     if (itemNum) itemIndexByNum[itemNum] = index;
     lastItemIndex = index;
   }
@@ -375,14 +376,20 @@ export function extractDate(text: string): string | undefined {
  * Extracts an order number from receipt text.
  * Handles:
  *   Walmart: "Order# 2000147-33985221"
- *   Costco: no order number (transaction # is too short to be useful)
+ *   Costco: barcode line (long digit string following "barcode" header)
  */
 export function extractOrderNumber(text: string): string | undefined {
   const lines = text.split(/\r?\n/).map((l) => l.trim());
-  for (const line of lines) {
-    // Walmart: "Order# 2000147-33985221" (with optional spaces around #)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Walmart: "Order# 2000147-33985221"
     const walmartMatch = line.match(/order\s*#\s*([0-9][-0-9]{5,})/i);
     if (walmartMatch) return walmartMatch[1].replace(/\s+/g, "");
+    // Costco: line literally "barcode" followed by a long all-digit string
+    if (/^barcode$/i.test(line) && i + 1 < lines.length) {
+      const next = lines[i + 1].trim();
+      if (/^\d{15,}$/.test(next)) return next;
+    }
   }
   return undefined;
 }
