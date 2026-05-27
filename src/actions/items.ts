@@ -30,6 +30,8 @@ export async function getItem(id: number) {
 export async function createItem(data: {
   name: string;
   unit?: string;
+  size?: number;
+  imageUrl?: string;
   categoryId: number;
 }) {
   const item = await db.item.create({ data });
@@ -39,7 +41,7 @@ export async function createItem(data: {
 
 export async function updateItem(
   id: number,
-  data: { name: string; unit?: string; categoryId: number }
+  data: { name: string; unit?: string; size?: number; imageUrl?: string; categoryId: number }
 ) {
   const item = await db.item.update({ where: { id }, data });
   revalidatePath("/items");

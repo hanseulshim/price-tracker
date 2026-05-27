@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Layers } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Layers, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,11 +16,14 @@ type ItemData = {
   id: number;
   name: string;
   unit: string | null;
+  size: number | null;
+  imageUrl: string | null;
   category: { id: number; name: string };
   storePrices: Array<{
     id: number;
     price: number;
     originalPrice: number | null;
+    prevPrice: number | null;
     storeId: number;
     brand: string | null;
     date: Date;
@@ -53,6 +57,20 @@ function SortButton({
   );
 }
 
+function TrendIcon({ price, prevPrice }: { price: number; prevPrice: number | null }) {
+  if (!prevPrice || price === prevPrice) return <Minus className="h-3 w-3 text-muted-foreground inline" />;
+  if (price < prevPrice) return (
+    <span title={`Was $${prevPrice.toFixed(2)}`}>
+      <TrendingDown className="h-3 w-3 text-green-600 inline" />
+    </span>
+  );
+  return (
+    <span title={`Was $${prevPrice.toFixed(2)}`}>
+      <TrendingUp className="h-3 w-3 text-red-500 inline" />
+    </span>
+  );
+}
+
 export function CompareTable({
   data,
   stores,
@@ -78,7 +96,6 @@ export function CompareTable({
     }
   }
 
-  // Stores that appear in at least one price entry
   const activeStoreIds = new Set(
     data.flatMap((item) => item.storePrices.map((p) => p.storeId))
   );
@@ -108,7 +125,7 @@ export function CompareTable({
           const prices = b.storePrices.map((p) => p.price);
           return prices.length >= 2 ? Math.max(...prices) - Math.min(...prices) : 0;
         })();
-        cmp = savingsB - savingsA; // bigger savings first by default
+        cmp = savingsB - savingsA;
       } else if (sortKey.startsWith("store-")) {
         const storeId = Number(sortKey.split("-")[1]);
         const priceA = a.storePrices.find((p) => p.storeId === storeId)?.price ?? Infinity;
@@ -173,7 +190,7 @@ export function CompareTable({
         <table className="w-full text-sm min-w-max">
           <thead className="bg-muted/50">
             <tr>
-              <th className="text-left py-3 px-4 font-medium sticky left-0 bg-muted/50 min-w-[180px]">
+              <th className="text-left py-3 px-4 font-medium sticky left-0 bg-muted/50 min-w-[200px]">
                 <button
                   className={cn("hover:text-foreground transition-colors flex items-center gap-1", sortKey === "name" ? "text-foreground" : "text-muted-foreground")}
                   onClick={() => handleSort("name")}
@@ -182,7 +199,7 @@ export function CompareTable({
                 </button>
               </th>
               {activeStores.map((store) => (
-                <th key={store.id} className="text-center py-3 px-4 font-medium whitespace-nowrap min-w-[110px]">
+                <th key={store.id} className="text-center py-3 px-4 font-medium whitespace-nowrap min-w-[120px]">
                   <SortButton
                     label={store.name}
                     sortKey={`store-${store.id}`}
@@ -205,7 +222,7 @@ export function CompareTable({
           </thead>
           <tbody>
             {(() => {
-              const colSpan = activeStores.length + 2; // item + stores + savings
+              const colSpan = activeStores.length + 2;
 
               function renderItemRow(item: ItemData) {
                 const priceMap = new Map(item.storePrices.map((p) => [p.storeId, p]));
@@ -215,26 +232,41 @@ export function CompareTable({
                 return (
                   <tr key={item.id} className="border-t hover:bg-muted/20">
                     <td className="py-2.5 px-4 sticky left-0 bg-background">
-                      <button
-                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
-                        onClick={() => setHistoryItem({ id: item.id, name: item.name })}
-                      >
-                        {item.name}
-                      </button>
-                      {!groupByCategory && (
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
-                          {item.unit && <span className="text-xs text-muted-foreground">/ {item.unit}</span>}
+                      <div className="flex items-start gap-2">
+                        {item.imageUrl && (
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.name}
+                            width={36}
+                            height={36}
+                            className="rounded object-contain flex-shrink-0 mt-0.5"
+                            unoptimized
+                          />
+                        )}
+                        <div>
+                          <button
+                            className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                            onClick={() => setHistoryItem({ id: item.id, name: item.name })}
+                          >
+                            {item.name}
+                          </button>
+                          {!groupByCategory && (
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
+                              {item.unit && <span className="text-xs text-muted-foreground">{item.size ? `${item.size} ${item.unit}` : item.unit}</span>}
+                            </div>
+                          )}
+                          {groupByCategory && item.unit && (
+                            <div className="text-xs text-muted-foreground mt-0.5">{item.size ? `${item.size} ${item.unit}` : item.unit}</div>
+                          )}
                         </div>
-                      )}
-                      {groupByCategory && item.unit && (
-                        <div className="text-xs text-muted-foreground mt-0.5">/ {item.unit}</div>
-                      )}
+                      </div>
                     </td>
                     {activeStores.map((store) => {
                       const p = priceMap.get(store.id);
                       const isCheapest = minPrice !== null && p?.price === minPrice && prices.length > 1;
                       const isMostExpensive = maxPrice !== null && p?.price === maxPrice && prices.length > 1;
+                      const unitPrice = p && item.size ? p.price / item.size : null;
                       return (
                         <td
                           key={store.id}
@@ -246,11 +278,19 @@ export function CompareTable({
                         >
                           {p ? (
                             <div>
-                              <span className={cn("font-semibold", isCheapest && "text-green-700 dark:text-green-400", isMostExpensive && !isCheapest && "text-red-600 dark:text-red-400")}>
-                                ${p.price.toFixed(2)}
-                              </span>
-                              {p.originalPrice && (
-                                <span className="text-xs text-muted-foreground line-through ml-1">${p.originalPrice.toFixed(2)}</span>
+                              <div className="flex items-center justify-center gap-1">
+                                <span className={cn("font-semibold", isCheapest && "text-green-700 dark:text-green-400", isMostExpensive && !isCheapest && "text-red-600 dark:text-red-400")}>
+                                  ${p.price.toFixed(2)}
+                                </span>
+                                {p.originalPrice && (
+                                  <span className="text-xs text-muted-foreground line-through">${p.originalPrice.toFixed(2)}</span>
+                                )}
+                                <TrendIcon price={p.price} prevPrice={p.prevPrice} />
+                              </div>
+                              {unitPrice !== null && (
+                                <div className="text-xs text-muted-foreground">
+                                  ${unitPrice.toFixed(2)}/{item.unit}
+                                </div>
                               )}
                               {p.brand && <div className="text-xs text-muted-foreground mt-0.5 italic">{p.brand}</div>}
                               <div className="text-xs text-muted-foreground mt-0.5">
@@ -286,7 +326,6 @@ export function CompareTable({
                 return filtered.map(renderItemRow);
               }
 
-              // Group by category, sorted alpha within each group
               const groups = new Map<string, { catName: string; items: ItemData[] }>();
               for (const item of filtered) {
                 const key = item.category.name;
@@ -316,7 +355,8 @@ export function CompareTable({
       <p className="text-xs text-muted-foreground">
         Showing {filtered.length} of {data.length} items.{" "}
         <span className="text-green-600 font-medium">Green</span> = best price.{" "}
-        Prices shown are the most recent recorded price at each store.{" "}
+        <TrendingDown className="h-3 w-3 text-green-600 inline" /> price went down,{" "}
+        <TrendingUp className="h-3 w-3 text-red-500 inline" /> price went up vs. last time.{" "}
         Click any item name to view price history.
       </p>
 

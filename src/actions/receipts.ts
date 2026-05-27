@@ -16,8 +16,10 @@ export async function getReceipts() {
       addressState: true,
       addressZip: true,
       notes: true,
-      store: { select: { name: true } },
+      storeId: true,
+      store: { select: { id: true, name: true } },
       _count: { select: { items: true } },
+      items: { select: { price: true, quantity: true } },
     },
     orderBy: { date: "desc" },
   });
@@ -111,5 +113,22 @@ export async function importReceipt(data: {
 
 export async function deleteReceipt(id: number) {
   await db.receipt.delete({ where: { id } });
+  revalidatePath("/receipts");
+}
+
+export async function updateReceipt(
+  id: number,
+  data: {
+    storeId: number;
+    date: Date;
+    orderNumber?: string;
+    addressLine1?: string;
+    addressCity?: string;
+    addressState?: string;
+    addressZip?: string;
+    notes?: string;
+  }
+) {
+  await db.receipt.update({ where: { id }, data });
   revalidatePath("/receipts");
 }

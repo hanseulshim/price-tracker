@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Tag } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,8 @@ type Item = {
   id: number;
   name: string;
   unit: string | null;
+  size: number | null;
+  imageUrl: string | null;
   categoryId: number;
   category: { id: number; name: string };
   _count: { prices: number };
@@ -59,12 +62,14 @@ export function ItemList({
   // Form state
   const [formName, setFormName] = useState("");
   const [formUnit, setFormUnit] = useState("");
+  const [formSize, setFormSize] = useState("");
   const [formCategoryId, setFormCategoryId] = useState<number>(categories[0]?.id ?? 0);
 
   function openCreate() {
     setEditing(null);
     setFormName("");
     setFormUnit("");
+    setFormSize("");
     setFormCategoryId(categories[0]?.id ?? 0);
     setDialogOpen(true);
   }
@@ -73,6 +78,7 @@ export function ItemList({
     setEditing(item);
     setFormName(item.name);
     setFormUnit(item.unit ?? "");
+    setFormSize(item.size != null ? String(item.size) : "");
     setFormCategoryId(item.categoryId);
     setDialogOpen(true);
   }
@@ -84,6 +90,7 @@ export function ItemList({
       const data = {
         name: formName.trim(),
         unit: formUnit.trim() || undefined,
+        size: formSize.trim() ? parseFloat(formSize.trim()) : undefined,
         categoryId: formCategoryId,
       };
       if (editing) {
@@ -176,18 +183,23 @@ export function ItemList({
               {filtered.map((item) => (
                 <tr key={item.id} className="border-t hover:bg-muted/30">
                   <td className="py-2.5 px-4">
-                    <button
-                      className="font-medium text-left hover:text-primary hover:underline transition-colors"
-                      onClick={() => setHistoryItem(item)}
-                    >
-                      {item.name}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {item.imageUrl && (
+                        <Image src={item.imageUrl} alt={item.name} width={28} height={28} className="rounded object-contain flex-shrink-0" unoptimized />
+                      )}
+                      <button
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                        onClick={() => setHistoryItem(item)}
+                      >
+                        {item.name}
+                      </button>
+                    </div>
                   </td>
                   <td className="py-2.5 px-4 hidden sm:table-cell">
                     <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
                   </td>
                   <td className="py-2.5 px-4 text-muted-foreground hidden md:table-cell">
-                    {item.unit ?? "—"}
+                    {item.size != null && item.unit ? `${item.size} ${item.unit}` : (item.unit ?? "—")}
                   </td>
                   <td className="py-2.5 px-4">
                     <Badge variant="secondary" className="text-xs">{item._count.prices}</Badge>
@@ -219,10 +231,14 @@ export function ItemList({
               <Label htmlFor="item-name">Name *</Label>
               <Input id="item-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g. Whole Milk, Chicken Breast" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="item-unit">Unit (optional)</Label>
-                <Input id="item-unit" value={formUnit} onChange={(e) => setFormUnit(e.target.value)} placeholder="e.g. oz, lb, count" />
+                <Label htmlFor="item-unit">Unit</Label>
+                <Input id="item-unit" value={formUnit} onChange={(e) => setFormUnit(e.target.value)} placeholder="oz, lb, ct" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="item-size">Size</Label>
+                <Input id="item-size" type="number" value={formSize} onChange={(e) => setFormSize(e.target.value)} placeholder="e.g. 32" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="item-category">Category *</Label>

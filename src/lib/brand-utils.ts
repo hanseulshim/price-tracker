@@ -255,3 +255,32 @@ export function extractBrand(name: string): string | null {
   }
   return null;
 }
+
+/**
+ * Returns items from the list that are "similar" to the given name.
+ * Uses a simple word-overlap score: if ≥2 significant words match, it's similar.
+ * Returns up to 3 matches sorted by score descending.
+ */
+export function findSimilarItems(
+  name: string,
+  items: Array<{ id: number; name: string }>,
+  threshold = 0.4
+): Array<{ id: number; name: string; score: number }> {
+  const stopWords = new Set(["the", "a", "an", "and", "of", "with", "in", "for", "oz", "lb", "ct", "pk", "fl"]);
+  function tokenize(s: string) {
+    return s.toLowerCase().split(/\W+/).filter((w) => w.length > 1 && !stopWords.has(w));
+  }
+  const nameTokens = new Set(tokenize(name));
+  if (nameTokens.size === 0) return [];
+
+  return items
+    .map((item) => {
+      const itemTokens = tokenize(item.name);
+      const overlap = itemTokens.filter((t) => nameTokens.has(t)).length;
+      const score = overlap / Math.max(nameTokens.size, itemTokens.length, 1);
+      return { ...item, score };
+    })
+    .filter((x) => x.score >= threshold)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+}

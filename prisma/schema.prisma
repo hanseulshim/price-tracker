@@ -25,7 +25,9 @@ model Category {
 model Item {
   id           Int           @id @default(autoincrement())
   name         String
-  unit         String?
+  unit         String?       // e.g. "oz", "lb", "ct"
+  size         Float?        // numeric package size in the given unit, for price-per-unit calc
+  imageUrl     String?       // product image URL (e.g. from WarehouseRunner)
   categoryId   Int
   category     Category      @relation(fields: [categoryId], references: [id])
   prices       Price[]

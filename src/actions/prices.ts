@@ -68,14 +68,21 @@ export async function getComparisonData(itemIds?: number[]) {
   });
 
   return items.map((item) => {
+    // Build latest + previous price per store (for trend)
     const latestByStore = new Map<number, (typeof item.prices)[number]>();
+    const prevByStore = new Map<number, (typeof item.prices)[number]>();
     for (const price of item.prices) {
       if (!latestByStore.has(price.storeId)) {
         latestByStore.set(price.storeId, price);
+      } else if (!prevByStore.has(price.storeId)) {
+        prevByStore.set(price.storeId, price);
       }
     }
-    const storePrices = Array.from(latestByStore.values());
-    const cheapest = storePrices.reduce<(typeof item.prices)[number] | null>(
+    const storePrices = Array.from(latestByStore.values()).map((p) => ({
+      ...p,
+      prevPrice: prevByStore.get(p.storeId)?.price ?? null,
+    }));
+    const cheapest = storePrices.reduce<(typeof storePrices)[number] | null>(
       (min, p) => (!min || p.price < min.price ? p : min),
       null
     );
