@@ -535,8 +535,9 @@ export function ReceiptPage({
 
       {/* Import Dialog */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <div className="flex flex-col max-h-[90vh]">
+          <DialogHeader className="px-4 pt-4 pb-0 flex-shrink-0">
             <DialogTitle>
               {step === "paste" ? "Import Receipt" : `Review Items (${parsedItems.length} found)`}
             </DialogTitle>
@@ -544,7 +545,7 @@ export function ReceiptPage({
 
           {step === "paste" ? (
             <>
-              <div className="space-y-5 py-2">
+              <div className="space-y-5 px-4 py-4 overflow-y-auto flex-1 min-h-0">
                 {/* Store selector — pill buttons */}
                 <div className="space-y-2">
                   <Label>Store</Label>
@@ -628,7 +629,7 @@ export function ReceiptPage({
                   </div>
                 )}
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex-shrink-0 px-4 py-3 border-t">
                 <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
                 {!parsed ? (
                   <Button onClick={handleParse} disabled={!rawText.trim() || parsing}>
@@ -643,11 +644,11 @@ export function ReceiptPage({
             </>
           ) : (
             <>
-              <div className="space-y-2 py-2">
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <p className="text-sm text-muted-foreground px-4 py-3 flex-shrink-0">
                   Match each item to an existing item in your database, create it as new, or skip it.
                 </p>
-                <div className="space-y-1.5 max-h-[50vh] overflow-y-auto">
+                <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0 px-4">
                   {parsedItems.map((p, i) => (
                     <div key={i} className="border rounded-md p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
@@ -793,7 +794,7 @@ export function ReceiptPage({
                   ))}
                 </div>
               </div>
-              <DialogFooter className="flex gap-2">
+              <DialogFooter className="flex gap-2 flex-shrink-0 px-4 py-3 border-t">
                 <Button variant="outline" onClick={() => setStep("paste")}>← Back</Button>
                 <Button onClick={handleImport} disabled={saving}>
                   {saving ? "Saving..." : `Import ${parsedItems.filter((_, i) => matchedItems[i] !== "skip").length} Items`}
@@ -801,6 +802,7 @@ export function ReceiptPage({
               </DialogFooter>
             </>
           )}
+          </div>{/* end flex flex-col wrapper */}
         </DialogContent>
       </Dialog>
 
