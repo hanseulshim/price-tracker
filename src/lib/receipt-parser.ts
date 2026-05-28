@@ -220,7 +220,115 @@ function isWalmartWebFormat(text: string): boolean {
   );
 }
 
-// ─── Costco Receipt Parser ────────────────────────────────────────────────────
+// ─── Walmart Order Page Format (no section headers) ───────────────────────────
+// Handles the newer Walmart order copy-paste where items are separated by
+// "Add to cart" / "Review item" lines rather than section headers.
+
+const WALMART_ORDER_NOISE = [
+  /^\|$/,
+  /^Print invoice$/i,
+  /^Delivery from store$/i,
+  /^Delivered on\b/i,
+  /^Return eligible/i,
+  /^(Complete|Current),/,
+  /^Delivery dropped off/i,
+  /^Here's a photo/i,
+  /^View delivery photo$/i,
+  /^Proof of delivery/i,
+  /^How was your delivery/i,
+  /^Select a rating/i,
+  /^Add to cart$/i,
+  /^Add to list$/i,
+  /^\d+\s+items\s+received$/i,
+  /^Order\s*#/i,
+  // Item variant lines (not a product name)
+  /^[A-Za-z].+Type:/,        // "Shampoo & Conditioner Type: ..."
+];
+
+function isWalmartOrderNoise(line: string): boolean {
+  return WALMART_ORDER_NOISE.some((p) => p.test(line));
+}
+
+function isWalmartOrderItemName(line: string): boolean {
+  if (!line || isWalmartOrderNoise(line) || isWalmartDetailLine(line)) return false;
+  // Item names start with a capital letter and are descriptive
+  return /^[A-Z]/.test(line) && line.length > 5;
+}
+
+function parseWalmartOrder(text: string): ParsedItem[] {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  const items: ParsedItem[] = [];
+  let currentName = "";
+  let currentBlock: string[] = [];
+
+  function flushBlock() {
+    if (!currentName) return;
+    const { price, qty, originalPrice } = extractWalmartItemPrice(currentBlock);
+    if (price === null || price <= 0) return;
+    const unitPrice = Math.round((price / qty) * 100) / 100;
+    const unitOriginal = originalPrice
+      ? Math.round((originalPrice / qty) * 100) / 100
+      : undefined;
+    items.push({
+      rawName: cleanItemName(currentName),
+      price: unitPrice,
+      quantity: qty > 1 ? qty : undefined,
+      originalPrice: unitOriginal,
+    });
+    currentName = "";
+    currentBlock = [];
+  }
+
+  for (const line of lines) {
+    // "Review item" marks end of each item block
+    if (/^Review item$/i.test(line)) {
+      flushBlock();
+      continue;
+    }
+
+    if (isWalmartOrderNoise(line)) continue;
+
+    // If no current item name, try to start a new block
+    if (!currentName) {
+      if (isWalmartOrderItemName(line)) {
+        currentName = line;
+        currentBlock = [];
+      }
+      continue;
+    }
+
+    // Multi-line item names: if next line also looks like an item name continuation
+    // (a plain text line, not a detail line), append to name
+    if (
+      !isWalmartDetailLine(line) &&
+      !isWalmartOrderNoise(line) &&
+      !/^(Qty|Was \$|\$[\d.]+)/.test(line) &&
+      !/[¢$]\//.test(line) &&
+      !/from savings$/i.test(line) &&
+      currentBlock.length === 0
+    ) {
+      // This is still part of the item name (e.g. brand sub-line) — skip it,
+      // we already have the name
+    } else {
+      currentBlock.push(line);
+    }
+  }
+
+  flushBlock();
+  return items;
+}
+
+function isWalmartOrderFormat(text: string): boolean {
+  return (
+    /\d+\s+items\s+received/i.test(text) &&
+    /^Review item$/im.test(text) &&
+    /^Add to cart$/im.test(text)
+  );
+}
 // Handles copy-paste from Costco paper receipts — tab-separated lines:
 //   [E]\t<itemNum>\t<NAME>\t<price> <taxCode>
 //   \t<discountNum>\t/ <itemNum>\t<amount>-
@@ -450,6 +558,8 @@ export function parseReceiptText(text: string): ParsedReceipt {
   let items: ParsedItem[];
   if (isCostcoFormat(text)) {
     items = parseCostco(text);
+  } else if (isWalmartOrderFormat(text)) {
+    items = parseWalmartOrder(text);
   } else if (isWalmartWebFormat(text)) {
     items = parseWalmartWeb(text);
   } else {

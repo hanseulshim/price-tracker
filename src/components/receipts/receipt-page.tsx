@@ -648,7 +648,7 @@ export function ReceiptPage({
                 <p className="text-sm text-muted-foreground px-4 py-3 flex-shrink-0">
                   Match each item to an existing item in your database, create it as new, or skip it.
                 </p>
-                <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0 px-4">
+                <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0 px-4 pb-4">
                   {parsedItems.map((p, i) => (
                     <div key={i} className="border rounded-md p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
