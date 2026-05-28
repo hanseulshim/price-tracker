@@ -38,6 +38,7 @@ model Price {
   id            Int      @id @default(autoincrement())
   itemId        Int
   storeId       Int
+  receiptId     Int?
   price         Float
   originalPrice Float?   // pre-sale/pre-discount price, if item was on sale
   quantity      Float?
@@ -46,6 +47,7 @@ model Price {
   notes         String?
   item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  receipt       Receipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
 }
 
 model Receipt {
@@ -62,6 +64,7 @@ model Receipt {
   createdAt    DateTime      @default(now())
   store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
   items        ReceiptItem[]
+  prices       Price[]
 }
 
 model ReceiptItem {

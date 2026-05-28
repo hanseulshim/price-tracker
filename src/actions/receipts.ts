@@ -93,6 +93,7 @@ export async function importReceipt(data: {
         data: {
           itemId: ri.itemId,
           storeId: data.storeId,
+          receiptId: receipt.id,
           price: ri.price,
           originalPrice: originalPriceMap.get(ri.rawName),
           quantity: ri.quantity,
@@ -112,8 +113,11 @@ export async function importReceipt(data: {
 }
 
 export async function deleteReceipt(id: number) {
+  await db.price.deleteMany({ where: { receiptId: id } });
   await db.receipt.delete({ where: { id } });
   revalidatePath("/receipts");
+  revalidatePath("/compare");
+  revalidatePath("/");
 }
 
 export async function updateReceipt(
