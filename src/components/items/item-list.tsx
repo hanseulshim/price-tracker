@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Tag, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { createItem, updateItem, deleteItem } from "@/actions/items";
+import { createItem, updateItem, deleteItem, syncCostcoItemNames } from "@/actions/items";
 import { PriceHistoryDialog } from "./price-history-dialog";
 import { useRouter } from "next/navigation";
 
@@ -58,6 +58,21 @@ export function ItemList({
   const [filterCat, setFilterCat] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [historyItem, setHistoryItem] = useState<Item | null>(null);
+
+  const [syncing, setSyncing] = useState(false);
+
+  async function handleSyncCostco() {
+    setSyncing(true);
+    try {
+      const result = await syncCostcoItemNames();
+      toast.success(`Updated ${result.updated} item${result.updated !== 1 ? "s" : ""} from Costco lookup`);
+      router.refresh();
+    } catch {
+      toast.error("Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -155,6 +170,10 @@ export function ItemList({
         </div>
         <Button onClick={openCreate} size="sm" className="shrink-0">
           <Plus className="h-4 w-4 mr-1" /> Add Item
+        </Button>
+        <Button onClick={handleSyncCostco} size="sm" variant="outline" className="shrink-0" disabled={syncing}>
+          <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+          {syncing ? "Syncing…" : "Sync Costco Names"}
         </Button>
       </div>
 
