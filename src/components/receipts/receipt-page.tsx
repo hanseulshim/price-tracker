@@ -29,7 +29,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { parseReceipt, importReceipt, deleteReceipt, getReceipt, updateReceipt } from "@/actions/receipts";
 import { lookupCostcoItem, type CostcoItemInfo } from "@/actions/lookup";
-import { createItem } from "@/actions/items";
+import { createItem, updateItem } from "@/actions/items";
 import { stripBrandPrefix, normalizeName, guessCategory, findSimilarItems } from "@/lib/brand-utils";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -342,6 +342,17 @@ export function ReceiptPage({
           });
           finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: newItem.id, externalId: p.externalId, originalPrice: p.originalPrice });
         } else {
+          // If we have a lookup result, update the existing item's name/image/size
+          if (p.externalId && lookupCache[p.externalId]) {
+            const extras = lookupExtras[i] ?? {};
+            const lookupName = newItemNames[i]?.trim();
+            await updateItem(match, {
+              ...(lookupName ? { name: lookupName } : {}),
+              ...(extras.unit ? { unit: extras.unit } : {}),
+              ...(extras.size != null ? { size: extras.size } : {}),
+              ...(extras.imageUrl ? { imageUrl: extras.imageUrl } : {}),
+            });
+          }
           finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: match, externalId: p.externalId, originalPrice: p.originalPrice });
         }
       }
