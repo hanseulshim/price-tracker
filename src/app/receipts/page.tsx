@@ -14,7 +14,7 @@ export default async function ReceiptsPageWrapper() {
     getItems(),
   ]);
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Receipts</h1>
         <p className="text-muted-foreground mt-1">Import receipts to track prices</p>

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function StoresPage() {
   const stores = await getStores();
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Stores</h1>

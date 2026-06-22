@@ -220,7 +220,7 @@ export function CompareTable({
         <table className="w-full text-sm min-w-max">
           <thead className="bg-muted/50">
             <tr>
-              <th className="text-left py-3 px-4 font-medium sticky left-0 bg-muted/50 min-w-[200px]">
+              <th className="text-left py-4 px-4 font-medium sticky left-0 bg-muted/50 min-w-[200px]">
                 <button
                   className={cn("hover:text-foreground transition-colors flex items-center gap-1", sortKey === "name" ? "text-foreground" : "text-muted-foreground")}
                   onClick={() => handleSort("name")}
@@ -229,7 +229,7 @@ export function CompareTable({
                 </button>
               </th>
               {activeStores.map((store) => (
-                <th key={store.id} className="text-center py-3 px-4 font-medium whitespace-nowrap min-w-[120px]">
+                <th key={store.id} className="text-center py-4 px-4 font-medium whitespace-nowrap min-w-[120px]">
                   <SortButton
                     label={store.name}
                     sortKey={`store-${store.id}`}
@@ -239,7 +239,7 @@ export function CompareTable({
                   />
                 </th>
               ))}
-              <th className="text-center py-3 px-4 font-medium whitespace-nowrap min-w-[90px]">
+              <th className="text-center py-4 px-4 font-medium whitespace-nowrap min-w-[90px]">
                 <SortButton
                   label="Savings"
                   sortKey="savings"
@@ -261,7 +261,7 @@ export function CompareTable({
                 const maxPrice = prices.length ? Math.max(...prices) : null;
                 return (
                   <tr key={item.id} className="border-t hover:bg-muted/20">
-                    <td className="py-2.5 px-4 sticky left-0 bg-background">
+                    <td className="py-3.5 px-4 sticky left-0 bg-background">
                       <div className="flex items-start gap-2">
                         {item.imageUrl && (
                           <Image
@@ -301,7 +301,7 @@ export function CompareTable({
                         <td
                           key={store.id}
                           className={cn(
-                            "py-2.5 px-4 text-center",
+                            "py-3.5 px-4 text-center",
                             isCheapest && "bg-green-50 dark:bg-green-950/30",
                             isMostExpensive && !isCheapest && "bg-red-50/50 dark:bg-red-950/20"
                           )}
@@ -339,7 +339,7 @@ export function CompareTable({
                         </td>
                       );
                     })}
-                    <td className="py-2.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center">
                       {prices.length >= 2 ? (
                         <span className="text-emerald-600 font-medium text-sm">
                           ${(Math.max(...prices) - Math.min(...prices)).toFixed(2)}

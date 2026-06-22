@@ -238,7 +238,7 @@ export function ItemList({
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="py-2.5 px-4 w-8">
+                <th className="py-3 px-4 w-8">
                   <input
                     ref={selectAllRef}
                     type="checkbox"
@@ -252,17 +252,17 @@ export function ItemList({
                     }}
                   />
                 </th>
-                <th className="text-left py-2.5 px-4 font-medium">Item</th>
-                <th className="text-left py-2.5 px-4 font-medium hidden sm:table-cell">Category</th>
-                <th className="text-left py-2.5 px-4 font-medium hidden md:table-cell">Unit</th>
-                <th className="text-left py-2.5 px-4 font-medium">Prices</th>
-                <th className="w-20 py-2.5 px-4"></th>
+                <th className="text-left py-3 px-4 font-medium">Item</th>
+                <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">Category</th>
+                <th className="text-left py-3 px-4 font-medium hidden md:table-cell">Unit</th>
+                <th className="text-left py-3 px-4 font-medium">Prices</th>
+                <th className="w-20 py-3 px-4"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((item) => (
                 <tr key={item.id} className="border-t hover:bg-muted/30">
-                  <td className="py-2.5 px-4 w-8">
+                  <td className="py-3 px-4 w-8">
                     <input
                       type="checkbox"
                       className="rounded"
@@ -277,7 +277,7 @@ export function ItemList({
                       }}
                     />
                   </td>
-                  <td className="py-2.5 px-4">
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       {item.imageUrl && (
                         <Image src={item.imageUrl} alt={item.name} width={28} height={28} className="rounded object-contain flex-shrink-0" unoptimized />
@@ -290,16 +290,16 @@ export function ItemList({
                       </button>
                     </div>
                   </td>
-                  <td className="py-2.5 px-4 hidden sm:table-cell">
+                  <td className="py-3 px-4 hidden sm:table-cell">
                     <Badge variant="outline" className="text-xs">{item.category.name}</Badge>
                   </td>
-                  <td className="py-2.5 px-4 text-muted-foreground hidden md:table-cell">
+                  <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">
                     {item.size != null && item.unit ? `${item.size} ${item.unit}` : (item.unit ?? "—")}
                   </td>
-                  <td className="py-2.5 px-4">
+                  <td className="py-3 px-4">
                     <Badge variant="secondary" className="text-xs">{item._count.prices}</Badge>
                   </td>
-                  <td className="py-2.5 px-4">
+                  <td className="py-3 px-4">
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
                         <Pencil className="h-3.5 w-3.5" />

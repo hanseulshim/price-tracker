@@ -278,6 +278,11 @@ export function ReceiptPage({
       toFetch.map(({ externalId }) => lookupCostcoItem(externalId))
     );
 
+    const failCount = results.filter(r => r.status === "rejected").length;
+    if (failCount > 0) {
+      toast.warning(`${failCount} item lookup${failCount > 1 ? "s" : ""} failed — check your connection`);
+    }
+
     const newNames = [...initialNames];
     const newCats = [...initialCats];
     const newCache: Record<string, CostcoItemInfo | null> = {};
@@ -316,6 +321,10 @@ export function ReceiptPage({
   }
 
   async function handleImport() {
+    if (!storeId) {
+      toast.error("Please select a store");
+      return;
+    }
     setSaving(true);
     try {
       const finalItems: Array<{
@@ -355,6 +364,12 @@ export function ReceiptPage({
           }
           finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: match, externalId: p.externalId, originalPrice: p.originalPrice });
         }
+      }
+
+      if (finalItems.length === 0) {
+        toast.error("No items to import — all items were skipped");
+        setSaving(false);
+        return;
       }
 
       const [y, m, d] = date.split("-").map(Number);
@@ -454,7 +469,7 @@ export function ReceiptPage({
             const addrStr = addrParts.join(" ");
             return (
               <Card key={r.id}>
-                <CardContent className="py-3">
+                <CardContent className="py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <button

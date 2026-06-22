@@ -52,10 +52,12 @@ export async function createItem(data: {
   try {
     const item = await db.item.create({ data: parsed });
     revalidatePath("/items");
+    revalidatePath("/compare");
+    revalidatePath("/");
     return item;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      throw new Error("An item with this name already exists");
+      throw new Error("An item with this name already exists in this category");
     }
     if (err instanceof Error) throw err;
     throw new Error("Failed to create item");

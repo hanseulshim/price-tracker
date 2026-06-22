@@ -102,14 +102,14 @@ export function StoreList({ stores }: { stores: StoreWithCount[] }) {
         <Card className="border-dashed">
           <CardContent className="py-10 text-center">
             <Store className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">No stores yet. Add your first store!</p>
+            <p className="text-muted-foreground">No stores yet. Add the stores you shop at — like Costco, Walmart, or Lidl.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {stores.map((store) => (
             <Card key={store.id}>
-              <CardContent className="pt-4 pb-3">
+              <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="font-semibold truncate">{store.name}</h3>

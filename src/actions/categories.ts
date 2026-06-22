@@ -48,7 +48,14 @@ export async function updateCategory(id: number, name: string) {
 
 export async function deleteCategory(id: number) {
   if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid id");
-  await db.category.delete({ where: { id } });
-  revalidatePath("/categories");
-  revalidatePath("/items");
+  try {
+    await db.category.delete({ where: { id } });
+    revalidatePath("/categories");
+    revalidatePath("/items");
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && (err.code === "P2003" || err.code === "P2014")) {
+      throw new Error("Cannot delete category — move or delete its items first");
+    }
+    throw new Error("Failed to delete category");
+  }
 }

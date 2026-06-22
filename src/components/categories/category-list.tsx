@@ -97,14 +97,14 @@ export function CategoryList({ categories }: { categories: CategoryWithCount[] }
         <Card className="border-dashed">
           <CardContent className="py-10 text-center">
             <Tag className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">No categories yet.</p>
+            <p className="text-muted-foreground">No categories yet. Add categories like Produce, Dairy &amp; Eggs, Meat &amp; Seafood, Pantry, Snacks, Household.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {categories.map((cat) => (
             <Card key={cat.id}>
-              <CardContent className="py-3 flex items-center justify-between">
+              <CardContent className="py-4 px-5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">{cat.name}</span>
