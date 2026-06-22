@@ -92,7 +92,8 @@ export function StoreList({ stores }: { stores: StoreWithCount[] }) {
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{stores.length} {stores.length === 1 ? "store" : "stores"}</p>
         <Button onClick={openCreate} size="sm">
           <Plus className="h-4 w-4 mr-1" /> Add Store
         </Button>

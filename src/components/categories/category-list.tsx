@@ -87,7 +87,8 @@ export function CategoryList({ categories }: { categories: CategoryWithCount[] }
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{categories.length} {categories.length === 1 ? "category" : "categories"}</p>
         <Button onClick={openCreate} size="sm">
           <Plus className="h-4 w-4 mr-1" /> Add Category
         </Button>

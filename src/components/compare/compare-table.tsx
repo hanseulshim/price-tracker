@@ -178,42 +178,46 @@ export function CompareTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 flex-col sm:flex-row">
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Search items..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <div className="flex gap-2 flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-2">
+          <div className="relative sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="Search items..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select
+            className="border rounded-md px-3 py-2 text-sm bg-background"
+            value={filterCat ?? ""}
+            onChange={(e) => setFilterCat(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
-        <select
-          className="border rounded-md px-3 py-2 text-sm bg-background"
-          value={filterCat ?? ""}
-          onChange={(e) => setFilterCat(e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        <button
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-2 rounded-md border text-sm font-medium transition-colors",
-            groupByCategory
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background text-foreground hover:bg-muted"
-          )}
-          onClick={() => setGroupByCategory((v) => !v)}
-        >
-          <Layers className="h-4 w-4" />
-          Group by Category
-        </button>
-        <Button variant="outline" size="sm" onClick={() => exportCSV(filtered, activeStores)}>
-          <Download className="h-4 w-4 mr-1" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 rounded-md border text-sm font-medium transition-colors",
+              groupByCategory
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-foreground hover:bg-muted"
+            )}
+            onClick={() => setGroupByCategory((v) => !v)}
+          >
+            <Layers className="h-4 w-4" />
+            Group by Category
+          </button>
+          <Button variant="outline" size="sm" onClick={() => exportCSV(filtered, activeStores)}>
+            <Download className="h-4 w-4 mr-1" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-lg border overflow-x-auto">

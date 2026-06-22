@@ -204,24 +204,25 @@ export function ItemList({
             ))}
           </select>
         </div>
-        <Button onClick={openCreate} size="sm" className="shrink-0">
-          <Plus className="h-4 w-4 mr-1" /> Add Item
-        </Button>
-        <Button onClick={handleSyncCostco} size="sm" variant="outline" className="shrink-0" disabled={syncing}>
-          <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing…" : "Sync Costco Names"}
-        </Button>
-        {selected.size > 0 && (
-          <Button
-            size="sm"
-            variant="destructive"
-            className="shrink-0"
-            onClick={() => setBulkDeleteOpen(true)}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete {selected.size} selected
+        <div className="flex gap-2 shrink-0">
+          <Button onClick={openCreate} size="sm">
+            <Plus className="h-4 w-4 mr-1" /> Add Item
           </Button>
-        )}
+          <Button onClick={handleSyncCostco} size="sm" variant="outline" disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing…" : "Sync Costco Names"}
+          </Button>
+          {selected.size > 0 && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete {selected.size} selected
+            </Button>
+          )}
+        </div>
       </div>
 
       {filtered.length === 0 ? (
