@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Layers, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Layers, TrendingUp, TrendingDown, Minus, Download } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { PriceHistoryDialog } from "@/components/items/price-history-dialog";
@@ -138,6 +139,31 @@ export function CompareTable({
     return result;
   }, [data, search, filterCat, sortKey, sortDir]);
 
+  function exportCSV(filteredItems: ItemData[], exportStores: Store[]) {
+    const activeExportStores = exportStores.filter(s => filteredItems.some(i => i.storePrices.some(p => p.storeId === s.id)));
+    const header = ["Item", "Category", "Unit", "Size", ...activeExportStores.map(s => s.name), "Best Price Store"].join(",");
+    const rows = filteredItems.map(item => {
+      const priceMap = new Map(item.storePrices.map(p => [p.storeId, p.price]));
+      const cheapest = item.storePrices.reduce<typeof item.storePrices[0] | null>((min, p) => !min || p.price < min.price ? p : min, null);
+      return [
+        `"${item.name.replace(/"/g, '""')}"`,
+        `"${item.category.name}"`,
+        item.unit ?? "",
+        item.size ?? "",
+        ...activeExportStores.map(s => priceMap.get(s.id)?.toFixed(2) ?? ""),
+        cheapest ? `"${cheapest.store.name}"` : "",
+      ].join(",");
+    });
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "price-comparison.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (data.length === 0) {
     return (
       <Card className="border-dashed">
@@ -184,6 +210,10 @@ export function CompareTable({
           <Layers className="h-4 w-4" />
           Group by Category
         </button>
+        <Button variant="outline" size="sm" onClick={() => exportCSV(filtered, activeStores)}>
+          <Download className="h-4 w-4 mr-1" />
+          Export CSV
+        </Button>
       </div>
 
       <div className="rounded-lg border overflow-x-auto">

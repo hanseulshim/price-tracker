@@ -2,6 +2,20 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
+
+const ItemSchema = z.object({
+  name: z.string().min(1, "Item name is required").max(200),
+  unit: z.string().max(20).optional(),
+  size: z.number().positive().optional(),
+  imageUrl: z.string().url().optional(),
+  categoryId: z.number().int().positive(),
+});
+
+const ItemUpdateSchema = ItemSchema.partial().extend({
+  categoryId: z.number().int().positive().optional(),
+});
 
 export async function getItems(categoryId?: number) {
   return db.item.findMany({
@@ -34,21 +48,40 @@ export async function createItem(data: {
   imageUrl?: string;
   categoryId: number;
 }) {
-  const item = await db.item.create({ data });
-  revalidatePath("/items");
-  return item;
+  const parsed = ItemSchema.parse(data);
+  try {
+    const item = await db.item.create({ data: parsed });
+    revalidatePath("/items");
+    return item;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new Error("An item with this name already exists");
+    }
+    if (err instanceof Error) throw err;
+    throw new Error("Failed to create item");
+  }
 }
 
 export async function updateItem(
   id: number,
   data: { name?: string; unit?: string; size?: number; imageUrl?: string; categoryId?: number }
 ) {
-  const item = await db.item.update({ where: { id }, data });
-  revalidatePath("/items");
-  return item;
+  const parsed = ItemUpdateSchema.parse(data);
+  try {
+    const item = await db.item.update({ where: { id }, data: parsed });
+    revalidatePath("/items");
+    return item;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new Error("An item with this name already exists");
+    }
+    if (err instanceof Error) throw err;
+    throw new Error("Failed to update item");
+  }
 }
 
 export async function deleteItem(id: number) {
+  if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid id");
   await db.item.delete({ where: { id } });
   revalidatePath("/items");
 }

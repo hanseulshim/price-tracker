@@ -2,6 +2,25 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
+
+const PriceSchema = z.object({
+  itemId: z.number().int().positive(),
+  storeId: z.number().int().positive(),
+  price: z.number().positive("Price must be positive").max(99999),
+  quantity: z.number().positive().optional(),
+  brand: z.string().max(100).optional(),
+  date: z.date().optional(),
+  notes: z.string().max(500).optional(),
+});
+
+const PriceUpdateSchema = z.object({
+  price: z.number().positive("Price must be positive").max(99999),
+  quantity: z.number().positive().optional(),
+  date: z.date().optional(),
+  notes: z.string().max(500).optional(),
+});
 
 export async function addPrice(data: {
   itemId: number;
@@ -12,16 +31,25 @@ export async function addPrice(data: {
   date?: Date;
   notes?: string;
 }) {
-  const price = await db.price.create({
-    data: {
-      ...data,
-      date: data.date ?? new Date(),
-    },
-  });
-  revalidatePath("/items");
-  revalidatePath("/compare");
-  revalidatePath("/");
-  return price;
+  const parsed = PriceSchema.parse(data);
+  try {
+    const price = await db.price.create({
+      data: {
+        ...parsed,
+        date: parsed.date ?? new Date(),
+      },
+    });
+    revalidatePath("/items");
+    revalidatePath("/compare");
+    revalidatePath("/");
+    return price;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new Error("A record with this name already exists");
+    }
+    if (err instanceof Error) throw err;
+    throw new Error("Failed to add price");
+  }
 }
 
 export async function updatePrice(
@@ -33,13 +61,23 @@ export async function updatePrice(
     notes?: string;
   }
 ) {
-  const price = await db.price.update({ where: { id }, data });
-  revalidatePath("/items");
-  revalidatePath("/compare");
-  return price;
+  const parsed = PriceUpdateSchema.parse(data);
+  try {
+    const price = await db.price.update({ where: { id }, data: parsed });
+    revalidatePath("/items");
+    revalidatePath("/compare");
+    return price;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new Error("A record with this name already exists");
+    }
+    if (err instanceof Error) throw err;
+    throw new Error("Failed to update price");
+  }
 }
 
 export async function deletePrice(id: number) {
+  if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid id");
   await db.price.delete({ where: { id } });
   revalidatePath("/items");
   revalidatePath("/compare");

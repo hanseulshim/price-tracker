@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Tag, RefreshCw } from "lucide-react";
 import Image from "next/image";
@@ -60,6 +60,10 @@ export function ItemList({
   const [historyItem, setHistoryItem] = useState<Item | null>(null);
 
   const [syncing, setSyncing] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   async function handleSyncCostco() {
     setSyncing(true);
@@ -135,6 +139,23 @@ export function ItemList({
     setDeleteId(null);
   }
 
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    try {
+      for (const id of selected) {
+        await deleteItem(id);
+      }
+      toast.success(`Deleted ${selected.size} item${selected.size !== 1 ? "s" : ""}`);
+      setSelected(new Set());
+      setBulkDeleteOpen(false);
+      router.refresh();
+    } catch {
+      toast.error("Failed to delete some items");
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
   const filtered = items.filter((item) => {
     const q = search.toLowerCase();
     const matchesSearch =
@@ -143,6 +164,21 @@ export function ItemList({
     const matchesCat = !filterCat || item.categoryId === filterCat;
     return matchesSearch && matchesCat;
   });
+
+  // Clear selection when filtered list changes (search/filter change)
+  useEffect(() => {
+    setSelected(new Set());
+  }, [filtered.length, search, filterCat]);
+
+  // Update select-all checkbox indeterminate state
+  useEffect(() => {
+    if (selectAllRef.current) {
+      const allSelected = filtered.length > 0 && filtered.every(i => selected.has(i.id));
+      const someSelected = filtered.some(i => selected.has(i.id));
+      selectAllRef.current.checked = allSelected;
+      selectAllRef.current.indeterminate = someSelected && !allSelected;
+    }
+  }, [selected, filtered]);
 
   return (
     <>
@@ -175,6 +211,17 @@ export function ItemList({
           <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
           {syncing ? "Syncing…" : "Sync Costco Names"}
         </Button>
+        {selected.size > 0 && (
+          <Button
+            size="sm"
+            variant="destructive"
+            className="shrink-0"
+            onClick={() => setBulkDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete {selected.size} selected
+          </Button>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -191,6 +238,20 @@ export function ItemList({
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
+                <th className="py-2.5 px-4 w-8">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    className="rounded"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelected(new Set(filtered.map(i => i.id)));
+                      } else {
+                        setSelected(new Set());
+                      }
+                    }}
+                  />
+                </th>
                 <th className="text-left py-2.5 px-4 font-medium">Item</th>
                 <th className="text-left py-2.5 px-4 font-medium hidden sm:table-cell">Category</th>
                 <th className="text-left py-2.5 px-4 font-medium hidden md:table-cell">Unit</th>
@@ -201,6 +262,21 @@ export function ItemList({
             <tbody>
               {filtered.map((item) => (
                 <tr key={item.id} className="border-t hover:bg-muted/30">
+                  <td className="py-2.5 px-4 w-8">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={selected.has(item.id)}
+                      onChange={(e) => {
+                        setSelected(prev => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(item.id);
+                          else next.delete(item.id);
+                          return next;
+                        });
+                      }}
+                    />
+                  </td>
                   <td className="py-2.5 px-4">
                     <div className="flex items-center gap-2">
                       {item.imageUrl && (
@@ -302,6 +378,27 @@ export function ItemList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(o) => !o && setBulkDeleteOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selected.size} item{selected.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the selected items and all their price history. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <PriceHistoryDialog
         itemId={historyItem?.id ?? null}
         itemName={historyItem?.name ?? ""}

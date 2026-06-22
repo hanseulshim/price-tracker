@@ -32,6 +32,8 @@ model Item {
   category     Category      @relation(fields: [categoryId], references: [id])
   prices       Price[]
   receiptItems ReceiptItem[]
+
+  @@unique([name, categoryId])
 }
 
 model Price {
@@ -48,6 +50,8 @@ model Price {
   item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   receipt       Receipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  @@unique([itemId, storeId, receiptId])
 }
 
 model Receipt {
