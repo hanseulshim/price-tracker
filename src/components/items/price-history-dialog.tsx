@@ -24,13 +24,13 @@ import { getPricesForItem } from "@/actions/prices";
 type Price = Awaited<ReturnType<typeof getPricesForItem>>[number];
 
 const STORE_COLORS = [
-  "#10b981", // emerald
-  "#3b82f6", // blue
+  "#818cf8", // indigo
+  "#34d399", // emerald
   "#f59e0b", // amber
-  "#8b5cf6", // violet
-  "#ef4444", // red
-  "#06b6d4", // cyan
-  "#ec4899", // pink
+  "#a78bfa", // violet
+  "#f87171", // red
+  "#22d3ee", // cyan
+  "#f472b6", // pink
 ];
 
 function PriceTrend({ prices, storeId }: { prices: Price[]; storeId: number }) {
@@ -47,7 +47,7 @@ function PriceTrend({ prices, storeId }: { prices: Price[]; storeId: number }) {
       </span>
     );
   return (
-    <span className="text-emerald-600 text-xs ml-1 inline-flex items-center gap-0.5">
+    <span className="text-green-500 text-xs ml-1 inline-flex items-center gap-0.5">
       <TrendingDown className="h-3 w-3" />${diff.toFixed(2)}
     </span>
   );
@@ -210,7 +210,7 @@ export function PriceHistoryDialog({
                         {p.brand ?? "—"}
                       </td>
                       <td className="py-2 px-3 text-right">
-                        <span className="font-semibold text-emerald-700">
+                        <span className="font-semibold text-foreground">
                           ${p.price.toFixed(2)}
                         </span>
                         {p.originalPrice && (

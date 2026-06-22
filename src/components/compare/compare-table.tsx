@@ -341,7 +341,7 @@ export function CompareTable({
                     })}
                     <td className="py-3.5 px-4 text-center">
                       {prices.length >= 2 ? (
-                        <span className="text-emerald-600 font-medium text-sm">
+                        <span className="text-primary font-medium text-sm">
                           ${(Math.max(...prices) - Math.min(...prices)).toFixed(2)}
                         </span>
                       ) : (

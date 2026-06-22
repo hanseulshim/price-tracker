@@ -261,8 +261,8 @@ export function ReceiptPage({
     setStep("review");
   }
 
-  // Called after parse — fires all Costco lookups in parallel and applies results
-  async function runAutoLookups(parsed: ParsedItem[], initialNames: string[], initialCats: number[]) {
+  // Called after parse — fires all Costco lookups in parallel, streaming results as each completes
+  function runAutoLookups(parsed: ParsedItem[], initialNames: string[], initialCats: number[]) {
     const toFetch = parsed
       .map((p, i) => ({ i, externalId: p.externalId }))
       .filter((x): x is { i: number; externalId: string } => !!x.externalId);
@@ -274,50 +274,59 @@ export function ReceiptPage({
     toFetch.forEach(({ i }) => { loadingMap[i] = true; });
     setLookingUp(loadingMap);
 
-    const results = await Promise.allSettled(
-      toFetch.map(({ externalId }) => lookupCostcoItem(externalId))
-    );
+    let failCount = 0;
+    let doneCount = 0;
+    const total = toFetch.length;
 
-    const failCount = results.filter(r => r.status === "rejected").length;
-    if (failCount > 0) {
-      toast.warning(`${failCount} item lookup${failCount > 1 ? "s" : ""} failed — check your connection`);
-    }
+    toFetch.forEach(({ i, externalId }) => {
+      lookupCostcoItem(externalId).then((info) => {
+        if (!info) failCount++;
 
-    const newNames = [...initialNames];
-    const newCats = [...initialCats];
-    const newCache: Record<string, CostcoItemInfo | null> = {};
-    const newExtras: Record<number, { unit?: string; size?: number; imageUrl?: string }> = {};
+        setLookupCache((prev) => ({ ...prev, [externalId]: info }));
 
-    results.forEach((result, idx) => {
-      const { i, externalId } = toFetch[idx];
-      const info = result.status === "fulfilled" ? result.value : null;
-      newCache[externalId] = info;
-      if (info) {
-        newNames[i] = info.name;
-        const warehouseCat = info.category?.toLowerCase() ?? "";
-        const guessed = guessCategory(info.name) ||
-          categories.find((c) => warehouseCat.includes(c.name.toLowerCase()))?.name;
-        const cat = categories.find((c) => c.name === guessed) ?? categories[0];
-        if (cat) newCats[i] = cat.id;
-        // Parse unit/size from name: e.g. "32 oz", "24 ct", "4.7 lb"
-        const sizeMatch = info.name.match(/,?\s*(\d+(?:\.\d+)?)\s*(oz|fl\s*oz|lb|ct|count|pk|pack)\b/i);
-        if (sizeMatch) {
-          newExtras[i] = {
-            unit: sizeMatch[2].replace(/\s+/g, " ").toLowerCase().replace("fl oz", "fl oz"),
-            size: parseFloat(sizeMatch[1]),
-            imageUrl: info.imageUrl,
-          };
-        } else if (info.imageUrl) {
-          newExtras[i] = { imageUrl: info.imageUrl };
+        if (info) {
+          setNewItemNames((prev) => {
+            const next = [...prev];
+            next[i] = info.name;
+            return next;
+          });
+          setNewItemCategories((prev) => {
+            const next = [...prev];
+            const warehouseCat = info.category?.toLowerCase() ?? "";
+            const guessed = guessCategory(info.name) ||
+              categories.find((c) => warehouseCat.includes(c.name.toLowerCase()))?.name;
+            const cat = categories.find((c) => c.name === guessed) ?? categories[0];
+            if (cat) next[i] = cat.id;
+            return next;
+          });
+          const sizeMatch = info.name.match(/,?\s*(\d+(?:\.\d+)?)\s*(oz|fl\s*oz|lb|ct|count|pk|pack)\b/i);
+          setLookupExtras((prev) => ({
+            ...prev,
+            [i]: sizeMatch
+              ? {
+                  unit: sizeMatch[2].replace(/\s+/g, " ").toLowerCase(),
+                  size: parseFloat(sizeMatch[1]),
+                  imageUrl: info.imageUrl,
+                }
+              : info.imageUrl
+                ? { imageUrl: info.imageUrl }
+                : prev[i],
+          }));
         }
-      }
+      }).catch(() => {
+        failCount++;
+      }).finally(() => {
+        doneCount++;
+        setLookingUp((prev) => {
+          const next = { ...prev };
+          delete next[i];
+          return next;
+        });
+        if (doneCount === total && failCount > 0) {
+          toast.warning(`${failCount} item lookup${failCount > 1 ? "s" : ""} failed — check your connection`);
+        }
+      });
     });
-
-    setLookupCache(newCache);
-    setNewItemNames(newNames);
-    setNewItemCategories(newCats);
-    setLookupExtras(newExtras);
-    setLookingUp({});
   }
 
   async function handleImport() {
@@ -498,7 +507,7 @@ export function ReceiptPage({
                         </div>
                       </button>
                       <Badge variant="secondary" className="text-xs">{r._count.items} items</Badge>
-                      <Badge variant="outline" className="text-xs text-emerald-700">${r.items.reduce((s, i) => s + i.price * (i.quantity ?? 1), 0).toFixed(2)}</Badge>
+                      <Badge variant="outline" className="text-xs text-primary">${r.items.reduce((s, i) => s + i.price * (i.quantity ?? 1), 0).toFixed(2)}</Badge>
                     </div>
                     <div className="flex gap-1">
                       <Button
@@ -545,7 +554,7 @@ export function ReceiptPage({
                                 {ri.item?.category?.name ?? "—"}
                               </td>
                               <td className="py-1.5 pr-3 text-right text-muted-foreground">{ri.quantity ?? 1}</td>
-                              <td className="py-1.5 text-right font-medium text-emerald-700">${ri.price.toFixed(2)}</td>
+                              <td className="py-1.5 text-right font-medium text-foreground">${ri.price.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -586,7 +595,7 @@ export function ReceiptPage({
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors",
                           storeId === s.id
-                            ? "bg-emerald-700 text-white border-emerald-700"
+                            ? "bg-primary text-primary-foreground border-primary"
                             : "bg-background text-foreground border-border hover:bg-muted"
                         )}
                       >
@@ -695,7 +704,7 @@ export function ReceiptPage({
                               lookingUp[i]
                                 ? "text-muted-foreground"
                                 : lookupCache[p.externalId]
-                                  ? "text-green-600"
+                                  ? "text-primary"
                                   : "text-amber-500"
                             )}>
                               {lookingUp[i] ? (
@@ -721,7 +730,7 @@ export function ReceiptPage({
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           )}
-                          <span className="text-sm font-semibold text-emerald-700">${p.price.toFixed(2)}</span>
+                          <span className="text-sm font-semibold text-foreground">${p.price.toFixed(2)}</span>
                           {p.originalPrice && (
                             <span className="text-xs text-muted-foreground line-through">${p.originalPrice.toFixed(2)}</span>
                           )}

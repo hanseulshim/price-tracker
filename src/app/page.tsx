@@ -34,7 +34,7 @@ export default async function HomePage() {
             <ul className="space-y-2">
               <li className="flex items-center gap-3">
                 {stores.length > 0 ? (
-                  <span className="text-green-600 font-bold text-base">✓</span>
+                  <span className="text-primary font-bold text-base">✓</span>
                 ) : (
                   <span className="text-muted-foreground text-base">○</span>
                 )}
@@ -52,7 +52,7 @@ export default async function HomePage() {
               </li>
               <li className="flex items-center gap-3">
                 {categories.length > 0 ? (
-                  <span className="text-green-600 font-bold text-base">✓</span>
+                  <span className="text-primary font-bold text-base">✓</span>
                 ) : (
                   <span className="text-muted-foreground text-base">○</span>
                 )}
