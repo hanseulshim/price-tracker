@@ -335,7 +335,7 @@ export function ReceiptPage({
           const extras = lookupExtras[i] ?? {};
           const newItem = await createItem({
             name: newItemNames[i]?.trim() || normalizeName(p.rawName),
-            categoryId: newItemCategories[i] ?? categories[0]?.id ?? 1,
+            categoryId: newItemCategories[i] || categories[0]?.id || 1,
             unit: extras.unit,
             size: extras.size,
             imageUrl: extras.imageUrl,
@@ -407,6 +407,8 @@ export function ReceiptPage({
         </button>
         {stores.length === 0 ? (
           <p className="text-sm text-muted-foreground">Add a store first before importing receipts.</p>
+        ) : categories.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Add at least one category first before importing receipts.</p>
         ) : (
           <Button onClick={openImport} size="sm">
             <Upload className="h-4 w-4 mr-1" /> Import Receipt
