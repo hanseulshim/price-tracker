@@ -66,12 +66,17 @@ export function PriceHistoryDialog({
 }) {
   const [prices, setPrices] = useState<Price[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!itemId || !open) return;
     setLoading(true);
+    setError(false);
     getPricesForItem(itemId).then((data) => {
       setPrices(data);
+    }).catch(() => {
+      setError(true);
+    }).finally(() => {
       setLoading(false);
     });
   }, [itemId, open]);
@@ -113,6 +118,8 @@ export function PriceHistoryDialog({
 
         {loading ? (
           <p className="text-muted-foreground py-8 text-center text-sm">Loading…</p>
+        ) : error ? (
+          <p className="text-destructive py-8 text-center text-sm">Failed to load price history.</p>
         ) : prices.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center text-sm">
             No price history yet. Import a receipt to start tracking.

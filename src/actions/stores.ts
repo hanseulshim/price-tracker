@@ -68,4 +68,7 @@ export async function deleteStore(id: number) {
   if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid id");
   await db.store.delete({ where: { id } });
   revalidatePath("/stores");
+  revalidatePath("/compare");
+  revalidatePath("/items");
+  revalidatePath("/");
 }

@@ -536,7 +536,8 @@ export function ReceiptPage({
                     {loadingId === r.id ? (
                       <p className="text-sm text-muted-foreground py-3">Loading…</p>
                     ) : expandedDetails[r.id]?.items.length ? (
-                      <table className="w-full text-sm mt-3">
+                      <div className="overflow-x-auto -mx-1">
+                      <table className="w-full text-sm mt-3 min-w-[400px]">
                         <thead>
                           <tr className="text-left text-xs text-muted-foreground border-b">
                             <th className="pb-1 font-medium">Item</th>
@@ -560,6 +561,7 @@ export function ReceiptPage({
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     ) : (
                       <p className="text-sm text-muted-foreground py-3">No items found.</p>
                     )}
@@ -834,7 +836,7 @@ export function ReceiptPage({
               </div>
               <DialogFooter className="flex gap-2 flex-shrink-0 px-4 py-3 border-t">
                 <Button variant="outline" onClick={() => setStep("paste")}>← Back</Button>
-                <Button onClick={handleImport} disabled={saving}>
+                <Button onClick={handleImport} disabled={saving || parsedItems.filter((_, i) => matchedItems[i] !== "skip").length === 0}>
                   {saving ? "Saving..." : `Import ${parsedItems.filter((_, i) => matchedItems[i] !== "skip").length} Items`}
                 </Button>
               </DialogFooter>
@@ -849,7 +851,7 @@ export function ReceiptPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Receipt?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the receipt record. Price entries saved from this receipt will remain.
+              This will delete the receipt and all price entries imported from it. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -183,7 +183,12 @@ export function StoreList({ stores }: { stores: StoreWithCount[] }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Store?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the store and all its associated price data. This cannot be undone.
+              {(() => {
+                const s = stores.find((x) => x.id === deleteId);
+                return s
+                  ? `This will permanently delete "${s.name}" and its ${s._count.prices} price record${s._count.prices !== 1 ? "s" : ""}. This cannot be undone.`
+                  : "This will permanently delete the store and all its associated price data. This cannot be undone.";
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

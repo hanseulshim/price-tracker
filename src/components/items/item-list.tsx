@@ -365,7 +365,12 @@ export function ItemList({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Item?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the item and all its price history. This cannot be undone.
+              {(() => {
+                const item = items.find((x) => x.id === deleteId);
+                return item
+                  ? `This will delete "${item.name}" and its ${item._count.prices} price record${item._count.prices !== 1 ? "s" : ""}. This cannot be undone.`
+                  : "This will delete the item and all its price history. This cannot be undone.";
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

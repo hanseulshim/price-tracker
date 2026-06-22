@@ -176,6 +176,10 @@ export function CompareTable({
     );
   }
 
+  const storesWithData = stores.filter((s) =>
+    data.some((row) => row.prices.some((p) => p.storeId === s.id))
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -386,6 +390,11 @@ export function CompareTable({
         </table>
       </div>
 
+      {storesWithData.length < 2 && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          Add prices from a second store to see savings comparisons.
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         Showing {filtered.length} of {data.length} items.{" "}
         <span className="text-green-600 font-medium">Green</span> = best price.{" "}

@@ -72,6 +72,8 @@ export async function updateItem(
   try {
     const item = await db.item.update({ where: { id }, data: parsed });
     revalidatePath("/items");
+    revalidatePath("/compare");
+    revalidatePath("/");
     return item;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -86,6 +88,9 @@ export async function deleteItem(id: number) {
   if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid id");
   await db.item.delete({ where: { id } });
   revalidatePath("/items");
+  revalidatePath("/compare");
+  revalidatePath("/categories");
+  revalidatePath("/");
 }
 
 export async function syncCostcoItemNames(): Promise<{ updated: number; skipped: number }> {
