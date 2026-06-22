@@ -177,7 +177,7 @@ export function CompareTable({
   }
 
   const storesWithData = stores.filter((s) =>
-    data.some((row) => row.prices.some((p) => p.storeId === s.id))
+    data.some((row) => row.storePrices.some((p) => p.storeId === s.id))
   );
 
   return (
