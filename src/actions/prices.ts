@@ -66,6 +66,7 @@ export async function updatePrice(
     const price = await db.price.update({ where: { id }, data: parsed });
     revalidatePath("/items");
     revalidatePath("/compare");
+    revalidatePath("/");
     return price;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

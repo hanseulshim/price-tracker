@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { NavBar } from "@/components/layout/navbar";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 

@@ -400,8 +400,8 @@ export function ReceiptPage({
       toast.success(`Receipt imported — ${finalItems.length} items saved`);
       setImportOpen(false);
       router.refresh();
-    } catch {
-      toast.error("Failed to import receipt");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to import receipt");
     } finally {
       setSaving(false);
     }

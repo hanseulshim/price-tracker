@@ -340,7 +340,7 @@ export function ItemList({
                 <Label htmlFor="item-category">Category *</Label>
                 <select
                   id="item-category"
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-background text-foreground"
                   value={formCategoryId}
                   onChange={(e) => setFormCategoryId(Number(e.target.value))}
                 >
