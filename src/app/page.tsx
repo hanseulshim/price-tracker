@@ -44,7 +44,7 @@ export default async function HomePage() {
                 {stores.length === 0 && (
                   <Link
                     href="/stores"
-                    className="ml-auto text-sm font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900"
+                    className="ml-auto text-sm font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100"
                   >
                     Go to Stores →
                   </Link>
@@ -62,7 +62,7 @@ export default async function HomePage() {
                 {categories.length === 0 && (
                   <Link
                     href="/categories"
-                    className="ml-auto text-sm font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900"
+                    className="ml-auto text-sm font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100"
                   >
                     Go to Categories →
                   </Link>

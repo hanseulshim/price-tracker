@@ -524,6 +524,7 @@ export function ReceiptPage({
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
                         onClick={() => setDeleteId(r.id)}
+                        title="Delete receipt"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -806,12 +807,12 @@ export function ReceiptPage({
                               if (!similar.length) return null;
                               return (
                                 <div className="w-full flex flex-wrap gap-1.5 items-center">
-                                  <span className="text-xs text-amber-600 font-medium">Similar:</span>
+                                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Similar:</span>
                                   {similar.map((s) => (
                                     <button
                                       key={s.id}
                                       type="button"
-                                      className="text-xs border border-amber-400 bg-amber-50 text-amber-700 rounded px-2 py-0.5 hover:bg-amber-100 transition-colors"
+                                      className="text-xs border border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded px-2 py-0.5 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
                                       onClick={() => setMatchedItems((prev) => {
                                         const next = [...prev];
                                         next[i] = s.id;

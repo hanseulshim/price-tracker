@@ -331,7 +331,7 @@ export function CompareTable({
                                 {new Date(p.date).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
                               </div>
                               {p.originalPrice && (
-                                <div className="text-xs text-orange-600 font-medium">
+                                <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
                                   Sale −${(p.originalPrice - p.price).toFixed(2)}
                                 </div>
                               )}
