@@ -190,7 +190,7 @@ export function CompareTable({
             />
           </div>
           <select
-            className="border rounded-md px-3 py-2 text-sm bg-background"
+            className="border rounded-md px-3 py-2 text-sm bg-background text-foreground"
             value={filterCat ?? ""}
             onChange={(e) => setFilterCat(e.target.value ? Number(e.target.value) : null)}
           >

@@ -738,7 +738,7 @@ export function ReceiptPage({
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         <select
-                          className="flex-1 border rounded px-2 py-1.5 text-xs bg-background min-w-0"
+                          className="flex-1 border rounded px-2 py-1.5 text-xs bg-background text-foreground min-w-0"
                           value={matchedItems[i] ?? "new"}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -763,7 +763,7 @@ export function ReceiptPage({
                           <div className="flex gap-2 w-full flex-wrap">
                             <input
                               type="text"
-                              className="flex-1 border rounded px-2 py-1.5 text-xs bg-background min-w-0"
+                              className="flex-1 border rounded px-2 py-1.5 text-xs bg-background text-foreground min-w-0"
                               placeholder="Item name"
                               value={newItemNames[i] ?? ""}
                               onChange={(e) => {
@@ -785,7 +785,7 @@ export function ReceiptPage({
                               }}
                             />
                             <select
-                              className="border rounded px-2 py-1.5 text-xs bg-background"
+                              className="border rounded px-2 py-1.5 text-xs bg-background text-foreground"
                               value={newItemCategories[i]}
                               onChange={(e) => {
                                 setNewItemCategories((prev) => {
