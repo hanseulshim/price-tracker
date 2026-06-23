@@ -669,7 +669,7 @@ export function ReceiptPage({
                   </div>
                 )}
               </div>
-              <DialogFooter className="flex-shrink-0 px-4 py-3 border-t">
+              <DialogFooter className="flex-shrink-0 mx-0 mb-0 px-4 py-3 border-t rounded-none">
                 <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
                 {!parsed ? (
                   <Button onClick={handleParse} disabled={!rawText.trim() || parsing}>
@@ -834,7 +834,7 @@ export function ReceiptPage({
                   ))}
                 </div>
               </div>
-              <DialogFooter className="flex gap-2 flex-shrink-0 px-4 py-3 border-t">
+              <DialogFooter className="flex gap-2 flex-shrink-0 mx-0 mb-0 px-4 py-3 border-t rounded-none">
                 <Button variant="outline" onClick={() => setStep("paste")}>← Back</Button>
                 <Button onClick={handleImport} disabled={saving || parsedItems.filter((_, i) => matchedItems[i] !== "skip").length === 0}>
                   {saving ? "Saving..." : `Import ${parsedItems.filter((_, i) => matchedItems[i] !== "skip").length} Items`}
