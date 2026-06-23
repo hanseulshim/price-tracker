@@ -592,8 +592,8 @@ export function ReceiptPage({
 
       {/* Import Dialog */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden">
-          <div className="flex flex-col max-h-[90vh]">
+        <DialogContent className="max-w-2xl p-0 overflow-hidden max-h-[90vh]">
+          <div className="flex flex-col h-full">
           <DialogHeader className="px-4 pt-4 pb-0 flex-shrink-0">
             <DialogTitle>
               {step === "paste" ? "Import Receipt" : `Review Items (${parsedItems.length} found)`}
