@@ -29,7 +29,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { parseReceipt, importReceipt, deleteReceipt, getReceipt, updateReceipt } from "@/actions/receipts";
 import { lookupCostcoItem, type CostcoItemInfo } from "@/actions/lookup";
-import { createItem, updateItem } from "@/actions/items";
+import { createItems, updateItem } from "@/actions/items";
 import { stripBrandPrefix, normalizeName, guessCategory, findSimilarItems } from "@/lib/brand-utils";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -336,14 +336,10 @@ export function ReceiptPage({
     }
     setSaving(true);
     try {
-      const finalItems: Array<{
-        rawName: string;
-        price: number;
-        quantity?: number;
-        itemId?: number;
-        externalId?: string;
-        originalPrice?: number;
-      }> = [];
+      // Separate new items from existing matches
+      const toCreate: Array<{ idx: number; name: string; categoryId: number; unit?: string; size?: number; imageUrl?: string }> = [];
+      const toUpdate: Array<{ id: number; data: Parameters<typeof updateItem>[1] }> = [];
+      const existingMatches: Array<{ idx: number; itemId: number }> = [];
 
       for (let i = 0; i < parsedItems.length; i++) {
         const p = parsedItems[i];
@@ -351,29 +347,50 @@ export function ReceiptPage({
         if (match === "skip") continue;
         if (match === "new") {
           const extras = lookupExtras[i] ?? {};
-          const newItem = await createItem({
+          toCreate.push({
+            idx: i,
             name: newItemNames[i]?.trim() || normalizeName(p.rawName),
             categoryId: newItemCategories[i] || categories[0]?.id || 1,
             unit: extras.unit,
             size: extras.size,
             imageUrl: extras.imageUrl,
           });
-          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: newItem.id, externalId: p.externalId, originalPrice: p.originalPrice });
         } else {
-          // If we have a lookup result, update the existing item's name/image/size
           if (p.externalId && lookupCache[p.externalId]) {
             const extras = lookupExtras[i] ?? {};
             const lookupName = newItemNames[i]?.trim();
-            await updateItem(match, {
+            toUpdate.push({ id: match, data: {
               ...(lookupName ? { name: lookupName } : {}),
               ...(extras.unit ? { unit: extras.unit } : {}),
               ...(extras.size != null ? { size: extras.size } : {}),
               ...(extras.imageUrl ? { imageUrl: extras.imageUrl } : {}),
-            });
+            }});
           }
-          finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: match, externalId: p.externalId, originalPrice: p.originalPrice });
+          existingMatches.push({ idx: i, itemId: match });
         }
       }
+
+      // Batch create new items + parallel update existing — one round trip each
+      const [createdItems] = await Promise.all([
+        toCreate.length > 0
+          ? createItems(toCreate.map(({ name, categoryId, unit, size, imageUrl }) => ({ name, categoryId, unit, size, imageUrl })))
+          : Promise.resolve([]),
+        ...toUpdate.map(({ id, data }) => updateItem(id, data)),
+      ]);
+
+      const finalItems: Array<{
+        rawName: string; price: number; quantity?: number;
+        itemId?: number; externalId?: string; originalPrice?: number;
+      }> = [];
+
+      toCreate.forEach(({ idx }, i) => {
+        const p = parsedItems[idx];
+        finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId: createdItems[i]?.id, externalId: p.externalId, originalPrice: p.originalPrice });
+      });
+      existingMatches.forEach(({ idx, itemId }) => {
+        const p = parsedItems[idx];
+        finalItems.push({ rawName: p.rawName, price: p.price, quantity: p.quantity, itemId, externalId: p.externalId, originalPrice: p.originalPrice });
+      });
 
       if (finalItems.length === 0) {
         toast.error("No items to import — all items were skipped");

@@ -93,6 +93,23 @@ export async function deleteItem(id: number) {
   revalidatePath("/");
 }
 
+export async function createItems(
+  items: Array<{ name: string; unit?: string; size?: number; imageUrl?: string; categoryId: number }>
+) {
+  const parsed = items.map((item) => ItemSchema.parse(item));
+  const created = await db.$transaction(
+    parsed.map((item) => db.item.upsert({
+      where: { name_categoryId: { name: item.name, categoryId: item.categoryId } },
+      update: { unit: item.unit, size: item.size, imageUrl: item.imageUrl },
+      create: item,
+    }))
+  );
+  revalidatePath("/items");
+  revalidatePath("/compare");
+  revalidatePath("/");
+  return created;
+}
+
 export async function syncCostcoItemNames(): Promise<{ updated: number; skipped: number }> {
   // Find all distinct (itemId, externalId) pairs from receipt items
   const rows = await db.receiptItem.findMany({

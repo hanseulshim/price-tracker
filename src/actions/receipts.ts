@@ -135,27 +135,25 @@ export async function importReceipt(data: {
       include: { items: true },
     });
 
-    // Save prices for matched items
-    // Build an index from rawName → originalPrice from input data
+    // Save prices for matched items — batch insert
     const originalPriceMap = new Map(
       parsed.items.map((item) => [item.rawName, item.originalPrice])
     );
-    for (const ri of receipt.items) {
-      if (ri.itemId) {
-        await db.price.create({
-          data: {
-            itemId: ri.itemId,
-            storeId: parsed.storeId,
-            receiptId: receipt.id,
-            price: ri.price,
-            originalPrice: originalPriceMap.get(ri.rawName),
-            quantity: ri.quantity,
-            brand: extractBrand(ri.rawName) ?? undefined,
-            date: parsed.date,
-            notes: `From receipt #${receipt.id}`,
-          },
-        });
-      }
+    const priceData = receipt.items
+      .filter((ri) => ri.itemId != null)
+      .map((ri) => ({
+        itemId: ri.itemId!,
+        storeId: parsed.storeId,
+        receiptId: receipt.id,
+        price: ri.price,
+        originalPrice: originalPriceMap.get(ri.rawName) ?? null,
+        quantity: ri.quantity ?? null,
+        brand: extractBrand(ri.rawName) ?? null,
+        date: parsed.date,
+        notes: `From receipt #${receipt.id}`,
+      }));
+    if (priceData.length > 0) {
+      await db.price.createMany({ data: priceData });
     }
 
     revalidatePath("/receipts");
