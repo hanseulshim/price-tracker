@@ -18,10 +18,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
-import { getPricesForItem } from "@/actions/prices";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { TrendingDown, TrendingUp, Minus, Plus, Check } from "lucide-react";
+import { toast } from "sonner";
+import { getPricesForItem, addPrice } from "@/actions/prices";
+import { getStores } from "@/actions/stores";
+import { cn } from "@/lib/utils";
 
 type Price = Awaited<ReturnType<typeof getPricesForItem>>[number];
+type Store = Awaited<ReturnType<typeof getStores>>[number];
 
 const STORE_COLORS = [
   "#818cf8", // indigo
@@ -65,15 +72,26 @@ export function PriceHistoryDialog({
   onClose: () => void;
 }) {
   const [prices, setPrices] = useState<Price[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+
+  // Add price form state
+  const [addOpen, setAddOpen] = useState(false);
+  const [addStoreId, setAddStoreId] = useState(0);
+  const [addPrice_, setAddPrice_] = useState("");
+  const [addDate, setAddDate] = useState(new Date().toISOString().split("T")[0]);
+  const [addNotes, setAddNotes] = useState("");
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     if (!itemId || !open) return;
     setLoading(true);
     setError(false);
-    getPricesForItem(itemId).then((data) => {
-      setPrices(data);
+    Promise.all([getPricesForItem(itemId), getStores()]).then(([priceData, storeData]) => {
+      setPrices(priceData);
+      setStores(storeData);
+      if (storeData.length > 0) setAddStoreId(storeData[0].id);
     }).catch(() => {
       setError(true);
     }).finally(() => {
@@ -81,8 +99,36 @@ export function PriceHistoryDialog({
     });
   }, [itemId, open]);
 
-  // Unique stores that have prices
-  const stores = Array.from(
+  async function handleAddPrice() {
+    if (!itemId || !addStoreId || !addPrice_) return;
+    const price = parseFloat(addPrice_);
+    if (isNaN(price) || price <= 0) { toast.error("Enter a valid price"); return; }
+    setAdding(true);
+    try {
+      const [y, m, d] = addDate.split("-").map(Number);
+      await addPrice({
+        itemId,
+        storeId: addStoreId,
+        price,
+        date: new Date(y, m - 1, d, 12, 0, 0),
+        notes: addNotes.trim() || undefined,
+      });
+      const updated = await getPricesForItem(itemId);
+      setPrices(updated);
+      setAddPrice_("");
+      setAddNotes("");
+      setAddDate(new Date().toISOString().split("T")[0]);
+      setAddOpen(false);
+      toast.success("Price added");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add price");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  // Unique stores that have prices (for chart/badges)
+  const priceStores = Array.from(
     new Map(prices.map((p) => [p.storeId, p.store.name])).entries()
   ).map(([id, name]) => ({ id, name }));
 
@@ -110,11 +156,84 @@ export function PriceHistoryDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">
-            {itemName}
-            <span className="font-normal text-muted-foreground ml-2">— Price History</span>
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="text-base">
+              {itemName}
+              <span className="font-normal text-muted-foreground ml-2">— Price History</span>
+            </DialogTitle>
+            {stores.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setAddOpen((v) => !v)}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add Price
+              </Button>
+            )}
+          </div>
         </DialogHeader>
+
+        {/* Inline add-price form */}
+        {addOpen && (
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add Price Entry</p>
+            <div className="space-y-2">
+              <Label className="text-xs">Store</Label>
+              <div className="flex flex-wrap gap-2">
+                {stores.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setAddStoreId(s.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors",
+                      addStoreId === s.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:bg-muted"
+                    )}
+                  >
+                    {addStoreId === s.id && <Check className="h-3.5 w-3.5" />}
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={addPrice_}
+                  onChange={(e) => setAddPrice_(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Date</Label>
+                <Input
+                  type="date"
+                  value={addDate}
+                  onChange={(e) => setAddDate(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Notes <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input
+                placeholder="e.g. on sale, bulk pack"
+                value={addNotes}
+                onChange={(e) => setAddNotes(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleAddPrice} disabled={adding || !addPrice_ || !addStoreId}>
+                {adding ? "Saving..." : "Save Price"}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-muted-foreground py-8 text-center text-sm">Loading…</p>
@@ -122,13 +241,13 @@ export function PriceHistoryDialog({
           <p className="text-destructive py-8 text-center text-sm">Failed to load price history.</p>
         ) : prices.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center text-sm">
-            No price history yet. Import a receipt to start tracking.
+            No price history yet. Import a receipt or add a price manually.
           </p>
         ) : (
           <div className="space-y-5">
             {/* Store summary badges */}
             <div className="flex flex-wrap gap-2">
-              {stores.map((store, i) => {
+              {priceStores.map((store, i) => {
                 const latest = prices
                   .filter((p) => p.storeId === store.id)
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -173,7 +292,7 @@ export function PriceHistoryDialog({
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: "12px" }} />
-                    {stores.map((store, i) => (
+                    {priceStores.map((store, i) => (
                       <Line
                         key={store.id}
                         type="monotone"
